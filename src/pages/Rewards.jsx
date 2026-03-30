@@ -1,0 +1,164 @@
+import { useState } from "react";
+import { Star, Gift, Zap, ChevronRight, Clock, CheckCircle2, ArrowDownLeft, ArrowUpRight, ShoppingBag, Plane, Coffee, Film, Smartphone, UtensilsCrossed } from "lucide-react";
+import { useBank } from "../context/BankContext";
+import PageSkeleton from "../components/PageSkeleton";
+import usePageLoad from "../hooks/usePageLoad";
+
+const OFFERS = [
+  { id: 1, icon: UtensilsCrossed, iconBg: "bg-orange-500", brand: "Swiggy",      title: "10% cashback on food orders",    description: "Min order ₹299. Max cashback ₹100.", validity: "Valid till 30 Apr 2026", pts: 200, tag: "Food",          tagColor: "bg-orange-100 text-orange-700 border-orange-200" },
+  { id: 2, icon: Plane,           iconBg: "bg-sky-600",    brand: "MakeMyTrip",  title: "5× reward points on flights",    description: "Earn 5x points on all flight bookings.", validity: "Valid till 15 Apr 2026", pts: 500, tag: "Travel",        tagColor: "bg-sky-100 text-sky-700 border-sky-200" },
+  { id: 3, icon: ShoppingBag,     iconBg: "bg-purple-600", brand: "Amazon",      title: "₹150 off on ₹999+",              description: "Shop electronics & get instant discount.", validity: "Valid till 10 Apr 2026", pts: 0,   tag: "Shopping",      tagColor: "bg-purple-100 text-purple-700 border-purple-200" },
+  { id: 4, icon: Coffee,          iconBg: "bg-amber-600",  brand: "Starbucks",   title: "Buy 1 Get 1 on beverages",       description: "Show offer at checkout. Weekends only.", validity: "Valid till 30 Apr 2026", pts: 150, tag: "Dining",        tagColor: "bg-amber-100 text-amber-700 border-amber-200" },
+  { id: 5, icon: Film,            iconBg: "bg-pink-600",   brand: "BookMyShow",  title: "₹100 off on movie tickets",      description: "Valid once per week per user.", validity: "Valid till 01 May 2026", pts: 100, tag: "Entertainment", tagColor: "bg-pink-100 text-pink-700 border-pink-200" },
+  { id: 6, icon: Smartphone,      iconBg: "bg-success",    brand: "Flipkart",    title: "3× points on mobile purchases",  description: "On purchase above ₹5,000.", validity: "Valid till 20 Apr 2026", pts: 300, tag: "Shopping",      tagColor: "bg-green-100 text-green-700 border-green-200" },
+];
+
+const POINTS_HISTORY = [
+  { id: 1, type: "earn",   title: "Salary Credit Bonus",    points: 1245, date: "28 Mar 2026" },
+  { id: 2, type: "earn",   title: "Online Shopping Bonus",  points: 70,   date: "27 Mar 2026" },
+  { id: 3, type: "redeem", title: "Redeemed for Cashback",  points: 500,  date: "22 Mar 2026" },
+  { id: 4, type: "earn",   title: "Freelance Payment Bonus",points: 180,  date: "22 Mar 2026" },
+  { id: 5, type: "earn",   title: "Cashback Reward",        points: 45,   date: "15 Mar 2026" },
+];
+
+function OfferCard({ offer }) {
+  const [claimed, setClaimed] = useState(false);
+  const Icon = offer.icon;
+  return (
+    <div className="group bg-bg-card border border-border-card hover:border-secondary/40 hover:shadow-md rounded-2xl p-5 flex flex-col gap-3 transition-all duration-150">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl ${offer.iconBg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-150`}>
+            <Icon size={17} className="text-white" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted font-medium">{offer.brand}</p>
+            <p className="text-text-main text-sm font-semibold leading-tight">{offer.title}</p>
+          </div>
+        </div>
+        <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${offer.tagColor}`}>{offer.tag}</span>
+      </div>
+      <p className="text-text-muted text-xs">{offer.description}</p>
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-border-card">
+        <span className="flex items-center gap-1.5 text-xs text-text-muted"><Clock size={10} />{offer.validity}</span>
+        {offer.pts > 0 && <span className="text-xs text-yellow-600 font-semibold">+{offer.pts} pts</span>}
+      </div>
+      <button onClick={() => setClaimed(true)} disabled={claimed}
+        className={`w-full py-2 rounded-xl text-sm font-semibold transition-all duration-150
+          ${claimed ? "bg-success/10 text-success border border-success/30 cursor-default" : "bg-accent hover:bg-accent-hover text-white shadow-sm"}`}>
+        {claimed ? <span className="flex items-center justify-center gap-1.5"><CheckCircle2 size={13} /> Claimed</span> : "Claim Offer"}
+      </button>
+    </div>
+  );
+}
+
+function HistoryRow({ item }) {
+  const isEarn = item.type === "earn";
+  return (
+    <div className="flex items-center justify-between px-4 py-3.5 rounded-xl bg-bg-card border border-border-card hover:border-secondary/40 hover:shadow-sm transition-all duration-150">
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isEarn ? "bg-yellow-100" : "bg-bg-page border border-border-card"}`}>
+          {isEarn ? <ArrowDownLeft size={14} className="text-yellow-600" /> : <ArrowUpRight size={14} className="text-text-muted" />}
+        </div>
+        <div>
+          <p className="text-text-main text-sm font-medium">{item.title}</p>
+          <p className="text-text-muted text-xs">{item.date}</p>
+        </div>
+      </div>
+      <span className={`text-sm font-bold ${isEarn ? "text-yellow-600" : "text-text-muted"}`}>
+        {isEarn ? "+" : "−"}{item.points} pts
+      </span>
+    </div>
+  );
+}
+
+export default function Rewards() {
+  const { rewardPoints } = useBank();
+  const loaded = usePageLoad();
+  if (!loaded) return <PageSkeleton rows={3} />;
+
+  const rupeeValue = Math.floor(rewardPoints / 4);
+
+  return (
+    <div className="space-y-5 max-w-4xl mx-auto page-enter">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-yellow-100 border border-yellow-200 flex items-center justify-center">
+          <Star size={17} className="text-yellow-600" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-text-main">Rewards</h1>
+          <p className="text-text-muted text-sm">Earn points, unlock offers, redeem for cashback</p>
+        </div>
+      </div>
+
+      {/* Points banner — gradient from primary to accent */}
+      <div className="relative rounded-2xl overflow-hidden p-6 bg-gradient-to-br from-primary to-accent shadow-sm">
+        <div className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
+        <div className="pointer-events-none absolute -bottom-6 -left-6 w-32 h-32 rounded-full bg-white/5" />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Star size={14} className="text-yellow-300" />
+              <p className="text-white/70 text-sm font-medium">NexusBank Rewards</p>
+            </div>
+            <p className="text-4xl font-black text-white tracking-tight">
+              {rewardPoints.toLocaleString("en-IN")}
+              <span className="text-xl font-semibold text-white/70 ml-2">pts</span>
+            </p>
+            <p className="text-white/60 text-sm mt-1.5">≈ ₹{rupeeValue.toLocaleString("en-IN")} cashback value</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <button className="flex items-center gap-2 bg-white text-primary font-semibold px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-150 shadow-sm text-sm">
+              <Gift size={14} /> Redeem Points
+            </button>
+            <p className="text-white/50 text-xs">4 pts = ₹1</p>
+          </div>
+        </div>
+        <div className="relative z-10 mt-5 pt-4 border-t border-white/15">
+          <div className="flex justify-between text-xs text-white/60 mb-1.5">
+            <span>🥈 Silver tier</span>
+            <span>{rewardPoints.toLocaleString("en-IN")} / 6,000 pts to 🥇 Gold</span>
+          </div>
+          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full bg-white rounded-full" style={{ width: `${Math.min((rewardPoints/6000)*100,100)}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { icon: Zap,  label: "Earned this month", value: "1,540 pts", color: "text-yellow-600", bg: "bg-yellow-100 border-yellow-200" },
+          { icon: Gift, label: "Redeemed",          value: "500 pts",   color: "text-purple-600", bg: "bg-purple-100 border-purple-200" },
+          { icon: Star, label: "Expiring soon",     value: "200 pts",   color: "text-danger",     bg: "bg-danger/10 border-danger/20" },
+        ].map(({ icon: Icon, label, value, color, bg }) => (
+          <div key={label} className={`rounded-2xl p-4 text-center border ${bg}`}>
+            <Icon size={17} className={`${color} mx-auto mb-1.5`} />
+            <p className={`text-sm font-bold ${color}`}>{value}</p>
+            <p className="text-text-muted text-[11px] mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Offers */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">Featured Offers</h2>
+          <button className="flex items-center gap-1 text-accent hover:text-accent-hover text-xs font-medium transition-colors">See all <ChevronRight size={12} /></button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {OFFERS.map((o) => <OfferCard key={o.id} offer={o} />)}
+        </div>
+      </div>
+
+      {/* Points history */}
+      <div>
+        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Points History</h2>
+        <div className="space-y-2">
+          {POINTS_HISTORY.map((item) => <HistoryRow key={item.id} item={item} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
