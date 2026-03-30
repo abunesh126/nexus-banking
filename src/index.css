@@ -1,17 +1,43 @@
 /* ── Base ── */
-*, *::before, *::after { box-sizing: border-box; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
 
-html, body, #root {
+html {
+  scroll-behavior: smooth;
   height: 100%;
-  margin: 0;
-  padding: 0;
 }
 
 body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
   font-family: 'Inter', system-ui, sans-serif;
   background-color: #F9FAFB;
   color: #111827;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Smooth touch scrolling */
+  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* ── Mobile safe area (notch support) ── */
+@supports (padding: max(0px)) {
+  .bottom-nav-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* ── Prevent overflow globally ── */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
 }
 
 /* ── Scrollbar ── */

@@ -28,14 +28,16 @@ function StatPill({ icon: Icon, label, value, positive }) {
 function QuickAction({ icon: Icon, label, color, onClick }) {
   return (
     <button onClick={onClick}
-      className="group flex flex-col items-center justify-center gap-2.5
-        rounded-2xl p-5 bg-bg-card border border-border-card
+      className="group flex flex-col items-center justify-center gap-2
+        rounded-2xl p-4 sm:p-5 bg-bg-card border border-border-card
         hover:border-secondary/40 hover:shadow-md
-        transition-all duration-150 hover:-translate-y-0.5 w-full">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color} group-hover:scale-110 transition-transform duration-150`}>
-        <Icon size={19} className="text-white" />
+        transition-all duration-150 hover:-translate-y-0.5 w-full
+        min-h-[88px]"
+    >
+      <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center ${color} group-hover:scale-110 transition-transform duration-150`}>
+        <Icon size={18} className="text-white" />
       </div>
-      <span className="text-text-main text-sm font-semibold">{label}</span>
+      <span className="text-text-main text-xs sm:text-sm font-semibold text-center leading-tight">{label}</span>
     </button>
   );
 }
@@ -73,16 +75,16 @@ function SpendingChart() {
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#485563", font: { size: 11 } }, border: { display: false } },
+      x: { grid: { display: false }, ticks: { color: "#485563", font: { size: 10 } }, border: { display: false } },
       y: {
         grid: { color: "#F3F4F6" },
-        ticks: { color: "#485563", font: { size: 11 }, callback: (v) => `₹${(v/1000).toFixed(0)}k` },
+        ticks: { color: "#485563", font: { size: 10 }, callback: (v) => `₹${(v/1000).toFixed(0)}k` },
         border: { display: false },
       },
     },
   };
 
-  return <div className="h-44"><Bar data={chartData} options={options} /></div>;
+  return <div className="h-40 sm:h-44 w-full"><Bar data={chartData} options={options} /></div>;
 }
 
 export default function Dashboard() {
@@ -106,78 +108,78 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto page-enter">
+    <div className="space-y-4 sm:space-y-5 max-w-5xl mx-auto page-enter">
 
       {/* Welcome */}
       <div>
         <div className="flex items-center gap-2 mb-0.5">
-          <ShieldCheck size={15} className="text-accent" />
+          <ShieldCheck size={14} className="text-accent" />
           <span className="text-accent text-xs font-semibold uppercase tracking-wide">Secure Banking</span>
         </div>
-        <h1 className="text-2xl font-bold text-text-main">
+        <h1 className="text-xl sm:text-2xl font-bold text-text-main">
           Welcome back, <span className="text-accent">{firstName}</span> 👋
         </h1>
         <p className="text-text-muted text-sm mt-0.5">Here's what's happening with your account today.</p>
       </div>
 
-      {/* Balance card — gradient from primary to accent */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary to-accent p-6 shadow-sm">
+      {/* Balance card */}
+      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary to-accent p-5 sm:p-6 shadow-sm">
         <div className="pointer-events-none absolute -top-8 -right-8 w-48 h-48 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute -bottom-6 -left-6 w-36 h-36 rounded-full bg-white/5" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1.5">
             <Wallet size={14} className="text-white/70" />
             <p className="text-white/70 text-sm font-medium">Total Balance</p>
           </div>
-          <p className="text-4xl font-black text-white tracking-tight mb-4">
+          <p className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3 sm:mb-4">
             ₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </p>
-          <div className="flex flex-wrap gap-2 mb-5">
+          <div className="flex flex-wrap gap-2 mb-4 sm:mb-5">
             <StatPill icon={TrendingDown} label="Money In"  value={`₹${monthlyCredit.toLocaleString("en-IN")}`} positive />
             <StatPill icon={TrendingUp}   label="Money Out" value={`₹${monthlyDebit.toLocaleString("en-IN")}`}  positive={false} />
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             <button onClick={() => navigate("/payments")}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-white text-primary font-semibold text-sm rounded-xl hover:bg-gray-50 transition-all duration-150 shadow-sm">
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-white text-primary font-semibold text-sm rounded-xl hover:bg-gray-50 transition-all duration-150 shadow-sm min-h-[44px]">
               <ArrowRightLeft size={14} /> Transfer
             </button>
-            <button className="flex items-center gap-1.5 px-4 py-2.5 bg-white/15 text-white font-semibold text-sm rounded-xl hover:bg-white/25 border border-white/20 transition-all duration-150">
+            <button className="flex items-center gap-1.5 px-4 py-2.5 bg-white/15 text-white font-semibold text-sm rounded-xl hover:bg-white/25 border border-white/20 transition-all duration-150 min-h-[44px]">
               <PlusCircle size={14} /> Add Money
             </button>
           </div>
         </div>
       </div>
 
-      {/* Quick actions */}
+      {/* Quick actions — 2 cols on mobile, 4 on sm+ */}
       <div>
-        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <h2 className="text-xs sm:text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Quick Actions</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {quickActions.map(({ icon, label, color, to }) => (
             <QuickAction key={to} icon={icon} label={label} color={color} onClick={() => navigate(to)} />
           ))}
         </div>
       </div>
 
-      {/* Chart + Recent transactions */}
+      {/* Chart + Recent transactions — stacked on mobile, side by side on lg */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-2 bg-bg-card border border-border-card rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-2 bg-bg-card border border-border-card rounded-2xl p-4 sm:p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h2 className="text-sm font-semibold text-text-main">Spending Summary</h2>
             <span className="text-xs text-text-muted bg-bg-page border border-border-card px-2.5 py-1 rounded-lg">Mar 2026</span>
           </div>
           <SpendingChart />
-          <div className="mt-4 pt-4 border-t border-border-card flex items-center justify-between">
+          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border-card flex items-center justify-between">
             <p className="text-text-muted text-xs">Total spent</p>
             <p className="text-text-main text-sm font-bold">₹{monthlyDebit.toLocaleString("en-IN")}</p>
           </div>
         </div>
 
-        <div className="lg:col-span-3 bg-bg-card border border-border-card rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-3 bg-bg-card border border-border-card rounded-2xl p-4 sm:p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h2 className="text-sm font-semibold text-text-main">Recent Transactions</h2>
             <button onClick={() => navigate("/passbook")}
-              className="flex items-center gap-1 text-accent hover:text-accent-hover text-xs font-medium transition-colors">
+              className="flex items-center gap-1 text-accent hover:text-accent-hover text-xs font-medium transition-colors min-h-[44px] px-2">
               View all <ChevronRight size={13} />
             </button>
           </div>
@@ -188,31 +190,31 @@ export default function Dashboard() {
       </div>
 
       {/* CIBIL + Rewards strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <button onClick={() => navigate("/cibil")}
           className="group flex items-center justify-between bg-bg-card border border-border-card
-            hover:border-accent/40 hover:shadow-sm rounded-2xl p-5 text-left transition-all duration-150">
+            hover:border-accent/40 hover:shadow-sm rounded-2xl p-4 sm:p-5 text-left transition-all duration-150 min-h-[80px]">
           <div>
             <p className="text-text-muted text-sm mb-1">CIBIL Score</p>
             <p className="text-3xl font-black text-text-main">{cibilScore}</p>
             <p className="text-success text-xs mt-1 font-semibold">● Excellent</p>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <PieChart size={32} className="text-accent group-hover:scale-110 transition-transform duration-150" />
+            <PieChart size={28} sm-size={32} className="text-accent group-hover:scale-110 transition-transform duration-150" />
             <ChevronRight size={13} className="text-text-muted group-hover:text-accent transition-colors" />
           </div>
         </button>
 
         <button onClick={() => navigate("/rewards")}
           className="group flex items-center justify-between bg-bg-card border border-border-card
-            hover:border-purple-400/40 hover:shadow-sm rounded-2xl p-5 text-left transition-all duration-150">
+            hover:border-purple-400/40 hover:shadow-sm rounded-2xl p-4 sm:p-5 text-left transition-all duration-150 min-h-[80px]">
           <div>
             <p className="text-text-muted text-sm mb-1">Reward Points</p>
             <p className="text-3xl font-black text-text-main">{rewardPoints.toLocaleString("en-IN")}</p>
             <p className="text-purple-600 text-xs mt-1 font-semibold">● Redeem now</p>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <Award size={32} className="text-purple-500 group-hover:scale-110 transition-transform duration-150" />
+            <Award size={28} className="text-purple-500 group-hover:scale-110 transition-transform duration-150" />
             <ChevronRight size={13} className="text-text-muted group-hover:text-purple-500 transition-colors" />
           </div>
         </button>

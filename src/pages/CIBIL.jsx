@@ -12,12 +12,11 @@ const SCORE_MIN = 300;
 const SCORE_MAX = 900;
 const SCORE_RANGE = 600;
 
-/* CIBIL zones with new accent palette */
 const ZONES = [
-  { label: "Poor",      min: 300, max: 549, color: "#DC2626" }, // danger
+  { label: "Poor",      min: 300, max: 549, color: "#DC2626" },
   { label: "Fair",      min: 550, max: 649, color: "#F59E0B" },
-  { label: "Good",      min: 650, max: 749, color: "#2563EB" }, // accent
-  { label: "Excellent", min: 750, max: 900, color: "#16A34A" }, // success
+  { label: "Good",      min: 650, max: 749, color: "#2563EB" },
+  { label: "Excellent", min: 750, max: 900, color: "#16A34A" },
 ];
 function getZone(score) { return ZONES.find((z) => score >= z.min && score <= z.max) ?? ZONES[0]; }
 
@@ -44,12 +43,12 @@ function GaugeChart({ score }) {
       const { ctx, chartArea: { left, right, bottom } } = chart;
       const cx = (left + right) / 2;
       ctx.save();
-      ctx.font = "bold 40px Inter, system-ui, sans-serif";
+      ctx.font = "bold 36px Inter, system-ui, sans-serif";
       ctx.fillStyle = "#111827";
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.fillText(score, cx, bottom - 6);
-      ctx.font = "600 13px Inter, system-ui, sans-serif";
+      ctx.font = "600 12px Inter, system-ui, sans-serif";
       ctx.fillStyle = zone.color;
       ctx.textBaseline = "top";
       ctx.fillText(zone.label, cx, bottom - 2);
@@ -65,7 +64,7 @@ function GaugeChart({ score }) {
   };
 
   return (
-    <div className="relative w-full max-w-[270px] mx-auto" style={{ height: 163 }}>
+    <div className="relative w-full max-w-[240px] sm:max-w-[270px] mx-auto" style={{ height: 145 }}>
       <Doughnut ref={gaugeRef} data={data} options={options} plugins={[centreTextPlugin]} />
     </div>
   );
@@ -73,29 +72,29 @@ function GaugeChart({ score }) {
 
 function ScaleLegend() {
   return (
-    <div className="flex gap-1 mt-2 w-full max-w-[270px] mx-auto">
+    <div className="flex gap-1 mt-2 w-full max-w-[240px] sm:max-w-[270px] mx-auto">
       {ZONES.map((z) => (
         <div key={z.label} className="flex-1 text-center">
           <div className="h-1.5 rounded-full mb-1" style={{ backgroundColor: z.color }} />
-          <p className="text-[10px] text-text-muted">{z.min}</p>
+          <p className="text-[9px] sm:text-[10px] text-text-muted">{z.min}</p>
         </div>
       ))}
-      <div className="text-center"><div className="h-1.5 mb-1" /><p className="text-[10px] text-text-muted">900</p></div>
+      <div className="text-center"><div className="h-1.5 mb-1" /><p className="text-[9px] sm:text-[10px] text-text-muted">900</p></div>
     </div>
   );
 }
 
 function FactorCard({ icon: Icon, label, value, sub, barColor, barPct, iconBg }) {
   return (
-    <div className="bg-bg-card border border-border-card rounded-2xl p-4 shadow-sm hover:border-secondary/40 hover:shadow-md transition-all duration-150">
+    <div className="bg-bg-card border border-border-card rounded-2xl p-3.5 sm:p-4 shadow-sm hover:border-secondary/40 hover:shadow-md transition-all duration-150">
       <div className="flex items-center justify-between mb-3">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg}`}>
-          <Icon size={16} className="text-white" />
+        <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center ${iconBg}`}>
+          <Icon size={15} className="text-white" />
         </div>
         <span className="text-base font-black text-text-main">{value}</span>
       </div>
-      <p className="text-text-main text-sm font-semibold">{label}</p>
-      <p className="text-text-muted text-xs mb-3">{sub}</p>
+      <p className="text-text-main text-sm font-semibold leading-tight">{label}</p>
+      <p className="text-text-muted text-xs mb-3 mt-0.5 leading-tight">{sub}</p>
       {typeof barPct === "number" && (
         <div className="h-1.5 bg-bg-page border border-border-card rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${barPct}%` }} />
@@ -119,32 +118,32 @@ function HistoryChart() {
         return g;
       },
       borderWidth: 2, pointBackgroundColor: "#2563EB", pointBorderColor: "#FFFFFF",
-      pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 7, tension: 0.4, fill: true,
+      pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, tension: 0.4, fill: true,
     }],
   };
   const options = {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false }, tooltip: { backgroundColor: "#1F2937", titleColor: "#9CA3AF", bodyColor: "#F9FAFB", borderColor: "#374151", borderWidth: 1, padding: 10, callbacks: { label: (c) => ` Score: ${c.raw}` } } },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#485563", font: { size: 11 } }, border: { display: false } },
-      y: { min: 680, max: 780, grid: { color: "#F3F4F6" }, ticks: { color: "#485563", font: { size: 11 }, stepSize: 20 }, border: { display: false } },
+      x: { grid: { display: false }, ticks: { color: "#485563", font: { size: 10 } }, border: { display: false } },
+      y: { min: 680, max: 780, grid: { color: "#F3F4F6" }, ticks: { color: "#485563", font: { size: 10 }, stepSize: 20 }, border: { display: false } },
     },
     animation: { duration: 1000, easing: "easeOutQuart" },
   };
-  return <div style={{ height: 195 }}><Line data={data} options={options} /></div>;
+  return <div style={{ height: 175 }} className="w-full"><Line data={data} options={options} /></div>;
 }
 
 const SCORE_FACTORS = [
-  { icon: CheckCircle2, label: "Payment History",    value: "95%",   sub: "On-time payments",     barColor: "bg-success",  barPct: 95,   iconBg: "bg-success" },
-  { icon: CreditCard,   label: "Credit Utilisation", value: "38%",   sub: "Recommended < 30%",    barColor: "bg-yellow-400", barPct: 38, iconBg: "bg-yellow-500" },
-  { icon: Clock,        label: "Credit Age",         value: "4 yrs", sub: "Average account age",  barColor: "bg-accent",   barPct: 65,   iconBg: "bg-accent" },
-  { icon: AlertCircle,  label: "Total Accounts",     value: "3",     sub: "Active credit lines",  barColor: "bg-secondary", barPct: null, iconBg: "bg-secondary" },
+  { icon: CheckCircle2, label: "Payment History",    value: "95%",   sub: "On-time payments",     barColor: "bg-success",    barPct: 95,   iconBg: "bg-success" },
+  { icon: CreditCard,   label: "Credit Utilisation", value: "38%",   sub: "Recommended < 30%",    barColor: "bg-yellow-400", barPct: 38,   iconBg: "bg-yellow-500" },
+  { icon: Clock,        label: "Credit Age",         value: "4 yrs", sub: "Average account age",  barColor: "bg-accent",     barPct: 65,   iconBg: "bg-accent" },
+  { icon: AlertCircle,  label: "Total Accounts",     value: "3",     sub: "Active credit lines",  barColor: "bg-secondary",  barPct: null, iconBg: "bg-secondary" },
 ];
 
 const TIPS = [
-  { icon: TrendingUp,  color: "text-success",  bg: "bg-success/5 border-success/20",             title: "Reduce credit utilisation",          body: "Keep credit card usage below 30% of the limit. Try paying your bill twice a month." },
-  { icon: ShieldCheck, color: "text-accent",   bg: "bg-accent/5 border-accent/20",               title: "Never miss a due date",              body: "Set auto-pay or reminders for all EMIs and credit card bills. Even one missed payment can drop your score by 50–100 points." },
-  { icon: Lightbulb,   color: "text-yellow-600", bg: "bg-yellow-50 border-yellow-200",           title: "Avoid multiple loan applications",    body: "Each hard enquiry lowers your score. Space out loan/card applications and compare offers before applying." },
+  { icon: TrendingUp,  color: "text-success",    bg: "bg-success/5 border-success/20",   title: "Reduce credit utilisation",       body: "Keep credit card usage below 30% of the limit. Try paying your bill twice a month." },
+  { icon: ShieldCheck, color: "text-accent",     bg: "bg-accent/5 border-accent/20",     title: "Never miss a due date",           body: "Set auto-pay or reminders for all EMIs and credit card bills. Even one missed payment can drop your score by 50–100 points." },
+  { icon: Lightbulb,   color: "text-yellow-600", bg: "bg-yellow-50 border-yellow-200",   title: "Avoid multiple loan applications", body: "Each hard enquiry lowers your score. Space out loan/card applications and compare offers before applying." },
 ];
 
 export default function CIBIL() {
@@ -158,19 +157,23 @@ export default function CIBIL() {
   if (!loaded) return <PageSkeleton rows={3} />;
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto page-enter">
+    <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto page-enter">
 
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h1 className="text-2xl font-bold text-text-main">CIBIL Score</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-text-main">CIBIL Score</h1>
         <div className="relative">
-          <button onMouseEnter={() => setShowTip(true)} onMouseLeave={() => setShowTip(false)}
+          <button
+            onMouseEnter={() => setShowTip(true)}
+            onMouseLeave={() => setShowTip(false)}
             onClick={() => setShowTip((v) => !v)}
-            className="text-text-muted hover:text-accent transition-colors" aria-label="What is CIBIL?">
+            className="text-text-muted hover:text-accent transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="What is CIBIL?"
+          >
             <Info size={17} />
           </button>
           {showTip && (
-            <div className="absolute left-6 top-0 z-50 w-72 bg-bg-card border border-border-card rounded-xl p-4 shadow-lg text-sm text-text-muted leading-relaxed">
+            <div className="absolute left-0 sm:left-6 top-full sm:top-0 z-50 w-64 sm:w-72 bg-bg-card border border-border-card rounded-xl p-4 shadow-lg text-sm text-text-muted leading-relaxed">
               <p className="font-semibold text-text-main mb-1">What is a CIBIL Score?</p>
               A CIBIL score (300–900) reflects your creditworthiness based on repayment history. Scores above 750 are considered excellent by most lenders.
             </div>
@@ -178,17 +181,17 @@ export default function CIBIL() {
         </div>
       </div>
 
-      {/* Gauge + History */}
+      {/* Gauge + History — stacked on mobile, side by side on md+ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-bg-card border border-border-card rounded-2xl p-6 shadow-sm flex flex-col items-center">
-          <p className="text-text-muted text-sm mb-4">Your Credit Score</p>
+        <div className="bg-bg-card border border-border-card rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col items-center">
+          <p className="text-text-muted text-sm mb-3">Your Credit Score</p>
           <GaugeChart score={score} />
           <ScaleLegend />
           <div className="mt-4 px-4 py-1.5 rounded-full text-sm font-semibold border"
                style={{ color: zone.color, borderColor: zone.color + "50", backgroundColor: zone.color + "10" }}>
             {zone.label} · {score} / {SCORE_MAX}
           </div>
-          <div className="mt-4 w-full max-w-[270px]">
+          <div className="mt-4 w-full max-w-[240px] sm:max-w-[270px]">
             <div className="h-2 rounded-full bg-bg-page border border-border-card overflow-hidden">
               <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, backgroundColor: zone.color }} />
             </div>
@@ -199,7 +202,7 @@ export default function CIBIL() {
           </div>
         </div>
 
-        <div className="bg-bg-card border border-border-card rounded-2xl p-6 shadow-sm">
+        <div className="bg-bg-card border border-border-card rounded-2xl p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-text-main">Score History</h2>
             <span className="text-xs text-text-muted bg-bg-page border border-border-card px-2.5 py-1 rounded-lg">Last 6 months</span>
@@ -215,28 +218,28 @@ export default function CIBIL() {
         </div>
       </div>
 
-      {/* Factors */}
+      {/* Score Factors — 2 cols on mobile, 4 on sm+ */}
       <div>
-        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Score Factors</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <h2 className="text-xs sm:text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Score Factors</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {SCORE_FACTORS.map((f) => <FactorCard key={f.label} {...f} />)}
         </div>
       </div>
 
       {/* Tips */}
       <div>
-        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">How to Improve Your Score</h2>
+        <h2 className="text-xs sm:text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">How to Improve Your Score</h2>
         <div className="space-y-3">
           {TIPS.map((tip, i) => (
-            <div key={i} className={`flex items-start gap-4 rounded-2xl p-5 border ${tip.bg} hover:shadow-sm transition-all duration-150`}>
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white border border-border-card flex items-center justify-center">
-                <tip.icon size={19} className={tip.color} />
+            <div key={i} className={`flex items-start gap-3 sm:gap-4 rounded-2xl p-4 sm:p-5 border ${tip.bg} hover:shadow-sm transition-all duration-150`}>
+              <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white border border-border-card flex items-center justify-center">
+                <tip.icon size={17} className={tip.color} />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-text-main font-semibold text-sm mb-1">{tip.title}</p>
                 <p className="text-text-muted text-xs leading-relaxed">{tip.body}</p>
               </div>
-              <ChevronRight size={15} className="flex-shrink-0 text-text-muted mt-0.5" />
+              <ChevronRight size={15} className="flex-shrink-0 text-text-muted mt-0.5 hidden sm:block" />
             </div>
           ))}
         </div>

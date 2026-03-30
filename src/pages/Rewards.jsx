@@ -25,26 +25,29 @@ function OfferCard({ offer }) {
   const [claimed, setClaimed] = useState(false);
   const Icon = offer.icon;
   return (
-    <div className="group bg-bg-card border border-border-card hover:border-secondary/40 hover:shadow-md rounded-2xl p-5 flex flex-col gap-3 transition-all duration-150">
+    <div className="group bg-bg-card border border-border-card hover:border-secondary/40 hover:shadow-md rounded-2xl p-4 sm:p-5 flex flex-col gap-3 transition-all duration-150">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-xl ${offer.iconBg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-150`}>
             <Icon size={17} className="text-white" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-text-muted font-medium">{offer.brand}</p>
             <p className="text-text-main text-sm font-semibold leading-tight">{offer.title}</p>
           </div>
         </div>
-        <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${offer.tagColor}`}>{offer.tag}</span>
+        <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${offer.tagColor} whitespace-nowrap`}>{offer.tag}</span>
       </div>
       <p className="text-text-muted text-xs">{offer.description}</p>
       <div className="flex items-center justify-between mt-auto pt-2 border-t border-border-card">
-        <span className="flex items-center gap-1.5 text-xs text-text-muted"><Clock size={10} />{offer.validity}</span>
-        {offer.pts > 0 && <span className="text-xs text-yellow-600 font-semibold">+{offer.pts} pts</span>}
+        <span className="flex items-center gap-1 text-xs text-text-muted">
+          <Clock size={10} className="flex-shrink-0" />
+          <span className="truncate">{offer.validity}</span>
+        </span>
+        {offer.pts > 0 && <span className="text-xs text-yellow-600 font-semibold flex-shrink-0 ml-2">+{offer.pts} pts</span>}
       </div>
       <button onClick={() => setClaimed(true)} disabled={claimed}
-        className={`w-full py-2 rounded-xl text-sm font-semibold transition-all duration-150
+        className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[44px]
           ${claimed ? "bg-success/10 text-success border border-success/30 cursor-default" : "bg-accent hover:bg-accent-hover text-white shadow-sm"}`}>
         {claimed ? <span className="flex items-center justify-center gap-1.5"><CheckCircle2 size={13} /> Claimed</span> : "Claim Offer"}
       </button>
@@ -55,17 +58,17 @@ function OfferCard({ offer }) {
 function HistoryRow({ item }) {
   const isEarn = item.type === "earn";
   return (
-    <div className="flex items-center justify-between px-4 py-3.5 rounded-xl bg-bg-card border border-border-card hover:border-secondary/40 hover:shadow-sm transition-all duration-150">
-      <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl bg-bg-card border border-border-card hover:border-secondary/40 hover:shadow-sm transition-all duration-150 min-h-[60px]">
+      <div className="flex items-center gap-3 min-w-0">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isEarn ? "bg-yellow-100" : "bg-bg-page border border-border-card"}`}>
           {isEarn ? <ArrowDownLeft size={14} className="text-yellow-600" /> : <ArrowUpRight size={14} className="text-text-muted" />}
         </div>
-        <div>
-          <p className="text-text-main text-sm font-medium">{item.title}</p>
+        <div className="min-w-0">
+          <p className="text-text-main text-sm font-medium truncate">{item.title}</p>
           <p className="text-text-muted text-xs">{item.date}</p>
         </div>
       </div>
-      <span className={`text-sm font-bold ${isEarn ? "text-yellow-600" : "text-text-muted"}`}>
+      <span className={`text-sm font-bold flex-shrink-0 ml-2 ${isEarn ? "text-yellow-600" : "text-text-muted"}`}>
         {isEarn ? "+" : "−"}{item.points} pts
       </span>
     </div>
@@ -80,81 +83,85 @@ export default function Rewards() {
   const rupeeValue = Math.floor(rewardPoints / 4);
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto page-enter">
+    <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto page-enter">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-yellow-100 border border-yellow-200 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-yellow-100 border border-yellow-200 flex items-center justify-center flex-shrink-0">
           <Star size={17} className="text-yellow-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-text-main">Rewards</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text-main">Rewards</h1>
           <p className="text-text-muted text-sm">Earn points, unlock offers, redeem for cashback</p>
         </div>
       </div>
 
-      {/* Points banner — gradient from primary to accent */}
-      <div className="relative rounded-2xl overflow-hidden p-6 bg-gradient-to-br from-primary to-accent shadow-sm">
+      {/* Points banner */}
+      <div className="relative rounded-2xl overflow-hidden p-5 sm:p-6 bg-gradient-to-br from-primary to-accent shadow-sm">
         <div className="pointer-events-none absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute -bottom-6 -left-6 w-32 h-32 rounded-full bg-white/5" />
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Star size={14} className="text-yellow-300" />
-              <p className="text-white/70 text-sm font-medium">NexusBank Rewards</p>
+        <div className="relative z-10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Star size={14} className="text-yellow-300" />
+                <p className="text-white/70 text-sm font-medium">NexusBank Rewards</p>
+              </div>
+              <p className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                {rewardPoints.toLocaleString("en-IN")}
+                <span className="text-lg sm:text-xl font-semibold text-white/70 ml-2">pts</span>
+              </p>
+              <p className="text-white/60 text-sm mt-1.5">≈ ₹{rupeeValue.toLocaleString("en-IN")} cashback value</p>
             </div>
-            <p className="text-4xl font-black text-white tracking-tight">
-              {rewardPoints.toLocaleString("en-IN")}
-              <span className="text-xl font-semibold text-white/70 ml-2">pts</span>
-            </p>
-            <p className="text-white/60 text-sm mt-1.5">≈ ₹{rupeeValue.toLocaleString("en-IN")} cashback value</p>
+            <div className="flex sm:flex-col gap-2 sm:items-end">
+              <button className="flex items-center gap-2 bg-white text-primary font-semibold px-4 sm:px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-150 shadow-sm text-sm min-h-[44px]">
+                <Gift size={14} /> Redeem Points
+              </button>
+              <p className="text-white/50 text-xs self-center">4 pts = ₹1</p>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 sm:items-end">
-            <button className="flex items-center gap-2 bg-white text-primary font-semibold px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-150 shadow-sm text-sm">
-              <Gift size={14} /> Redeem Points
-            </button>
-            <p className="text-white/50 text-xs">4 pts = ₹1</p>
-          </div>
-        </div>
-        <div className="relative z-10 mt-5 pt-4 border-t border-white/15">
-          <div className="flex justify-between text-xs text-white/60 mb-1.5">
-            <span>🥈 Silver tier</span>
-            <span>{rewardPoints.toLocaleString("en-IN")} / 6,000 pts to 🥇 Gold</span>
-          </div>
-          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full" style={{ width: `${Math.min((rewardPoints/6000)*100,100)}%` }} />
+          <div className="mt-5 pt-4 border-t border-white/15">
+            <div className="flex justify-between text-xs text-white/60 mb-1.5">
+              <span>🥈 Silver tier</span>
+              <span className="truncate ml-2">{rewardPoints.toLocaleString("en-IN")} / 6,000 pts to 🥇 Gold</span>
+            </div>
+            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${Math.min((rewardPoints/6000)*100,100)}%` }} />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Quick stats — 3 equal cols, responsive text */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[
           { icon: Zap,  label: "Earned this month", value: "1,540 pts", color: "text-yellow-600", bg: "bg-yellow-100 border-yellow-200" },
           { icon: Gift, label: "Redeemed",          value: "500 pts",   color: "text-purple-600", bg: "bg-purple-100 border-purple-200" },
           { icon: Star, label: "Expiring soon",     value: "200 pts",   color: "text-danger",     bg: "bg-danger/10 border-danger/20" },
         ].map(({ icon: Icon, label, value, color, bg }) => (
-          <div key={label} className={`rounded-2xl p-4 text-center border ${bg}`}>
-            <Icon size={17} className={`${color} mx-auto mb-1.5`} />
-            <p className={`text-sm font-bold ${color}`}>{value}</p>
-            <p className="text-text-muted text-[11px] mt-0.5">{label}</p>
+          <div key={label} className={`rounded-2xl p-3 sm:p-4 text-center border ${bg}`}>
+            <Icon size={16} className={`${color} mx-auto mb-1`} />
+            <p className={`text-xs sm:text-sm font-bold ${color} leading-tight`}>{value}</p>
+            <p className="text-text-muted text-[10px] sm:text-[11px] mt-0.5 leading-tight">{label}</p>
           </div>
         ))}
       </div>
 
-      {/* Offers */}
+      {/* Featured Offers — 1 col on mobile, 2 on sm, 3 on xl */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">Featured Offers</h2>
-          <button className="flex items-center gap-1 text-accent hover:text-accent-hover text-xs font-medium transition-colors">See all <ChevronRight size={12} /></button>
+          <h2 className="text-xs sm:text-sm font-semibold text-text-muted uppercase tracking-wide">Featured Offers</h2>
+          <button className="flex items-center gap-1 text-accent hover:text-accent-hover text-xs font-medium transition-colors min-h-[44px] px-1">
+            See all <ChevronRight size={12} />
+          </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
           {OFFERS.map((o) => <OfferCard key={o.id} offer={o} />)}
         </div>
       </div>
 
       {/* Points history */}
       <div>
-        <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Points History</h2>
+        <h2 className="text-xs sm:text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Points History</h2>
         <div className="space-y-2">
           {POINTS_HISTORY.map((item) => <HistoryRow key={item.id} item={item} />)}
         </div>

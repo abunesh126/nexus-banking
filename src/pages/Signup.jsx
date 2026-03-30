@@ -20,8 +20,8 @@ function Field({ label, error, children }) {
 const inputCls = (hasErr) =>
   `w-full bg-bg-page border ${
     hasErr ? "border-danger focus:ring-danger/30" : "border-border-card focus:ring-accent/30"
-  } rounded-xl px-4 py-2.5 text-text-main placeholder-text-muted text-sm
-   focus:outline-none focus:ring-2 transition-all duration-150`;
+  } rounded-xl px-4 py-3 text-text-main placeholder-text-muted text-sm
+   focus:outline-none focus:ring-2 transition-all duration-150 min-h-[48px]`;
 
 function passwordStrength(pwd) {
   let s = 0;
@@ -71,10 +71,10 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-page px-4 py-8">
+    <div className="min-h-screen flex items-start sm:items-center justify-center bg-bg-page px-4 py-8">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-2 mb-7">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
             <Landmark size={18} className="text-white" />
           </div>
@@ -83,9 +83,9 @@ export default function Signup() {
           </span>
         </div>
 
-        <div className="bg-bg-card border border-border-card rounded-2xl p-7 shadow-sm">
+        <div className="bg-bg-card border border-border-card rounded-2xl p-5 sm:p-7 shadow-sm">
           <h1 className="text-xl font-bold text-text-main mb-1">Create your account</h1>
-          <p className="text-text-muted text-sm mb-6">Free forever · No hidden charges</p>
+          <p className="text-text-muted text-sm mb-5">Free forever · No hidden charges</p>
 
           {success ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
@@ -97,32 +97,42 @@ export default function Signup() {
             <form onSubmit={handleSubmit} noValidate className="space-y-3.5">
               <Field label="Full Name" error={errors.fullName}>
                 <div className="relative">
-                  <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input id="signup-name" type="text" value={form.fullName} onChange={set("fullName")}
-                    className={`${inputCls(!!errors.fullName)} pl-10`} placeholder="Arjun Sharma" autoComplete="name" />
+                    className={`${inputCls(!!errors.fullName)} pl-10`}
+                    placeholder="Arjun Sharma" autoComplete="name"
+                    inputMode="text" />
                 </div>
               </Field>
+
               <Field label="Email address" error={errors.email}>
                 <div className="relative">
-                  <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input id="signup-email" type="email" value={form.email} onChange={set("email")}
-                    className={`${inputCls(!!errors.email)} pl-10`} placeholder="you@example.com" autoComplete="email" />
+                    className={`${inputCls(!!errors.email)} pl-10`}
+                    placeholder="you@example.com" autoComplete="email"
+                    inputMode="email" />
                 </div>
               </Field>
+
               <Field label="Phone Number" error={errors.phone}>
                 <div className="relative">
-                  <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input id="signup-phone" type="tel" value={form.phone} onChange={set("phone")}
-                    className={`${inputCls(!!errors.phone)} pl-10`} placeholder="9876543210" maxLength={10} />
+                    className={`${inputCls(!!errors.phone)} pl-10`}
+                    placeholder="9876543210" maxLength={10}
+                    inputMode="tel" autoComplete="tel" />
                 </div>
               </Field>
+
               <Field label="Password" error={errors.password}>
                 <div className="relative">
-                  <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input id="signup-password" type={showPwd ? "text" : "password"} value={form.password} onChange={set("password")}
-                    className={`${inputCls(!!errors.password)} pl-10 pr-10`} placeholder="••••••••" autoComplete="new-password" />
+                    className={`${inputCls(!!errors.password)} pl-10 pr-12`}
+                    placeholder="••••••••" autoComplete="new-password" />
                   <button type="button" onClick={() => setShowPwd(!showPwd)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors">
+                    className="absolute right-0 top-0 bottom-0 px-3.5 text-text-muted hover:text-primary transition-colors flex items-center min-w-[44px] justify-center">
                     {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
@@ -137,13 +147,15 @@ export default function Signup() {
                   </div>
                 )}
               </Field>
+
               <Field label="Confirm Password" error={errors.confirmPassword}>
                 <div className="relative">
-                  <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input id="signup-confirm-password" type={showConf ? "text" : "password"} value={form.confirmPassword} onChange={set("confirmPassword")}
-                    className={`${inputCls(!!errors.confirmPassword)} pl-10 pr-10`} placeholder="••••••••" autoComplete="new-password" />
+                    className={`${inputCls(!!errors.confirmPassword)} pl-10 pr-12`}
+                    placeholder="••••••••" autoComplete="new-password" />
                   <button type="button" onClick={() => setShowConf(!showConf)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors">
+                    className="absolute right-0 top-0 bottom-0 px-3.5 text-text-muted hover:text-primary transition-colors flex items-center min-w-[44px] justify-center">
                     {showConf ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
@@ -151,8 +163,8 @@ export default function Signup() {
 
               <button id="signup-submit" type="submit" disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover
-                  disabled:opacity-60 text-white font-semibold rounded-xl py-2.5 mt-1
-                  transition-all duration-150 shadow-sm">
+                  disabled:opacity-60 text-white font-semibold rounded-xl py-3 mt-1
+                  transition-all duration-150 shadow-sm min-h-[48px] text-sm">
                 {loading ? <><Loader2 size={16} className="animate-spin" /> Creating account…</> : "Create Account"}
               </button>
             </form>
@@ -162,18 +174,18 @@ export default function Signup() {
             <>
               <div className="flex items-center gap-3 my-5">
                 <div className="flex-1 h-px bg-border-card" />
-                <span className="text-xs text-text-muted">Already have an account?</span>
+                <span className="text-xs text-text-muted whitespace-nowrap">Already have an account?</span>
                 <div className="flex-1 h-px bg-border-card" />
               </div>
               <Link to="/login"
                 className="block w-full text-center border border-border-card hover:border-secondary/50
-                  hover:bg-bg-page text-text-main text-sm font-medium rounded-xl py-2.5 transition-all duration-150">
+                  hover:bg-bg-page text-text-main text-sm font-medium rounded-xl py-3 transition-all duration-150 min-h-[48px] flex items-center justify-center">
                 Sign in instead
               </Link>
             </>
           )}
         </div>
-        <p className="mt-5 text-center text-xs text-text-muted">Protected by 256-bit encryption · NexusBank © 2026</p>
+        <p className="mt-5 text-center text-xs text-text-muted px-4">Protected by 256-bit encryption · NexusBank © 2026</p>
       </div>
     </div>
   );
