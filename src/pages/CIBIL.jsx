@@ -3,8 +3,10 @@ import usePageLoad from "../hooks/usePageLoad";
 import PageSkeleton from "../components/PageSkeleton";
 import { Doughnut, Line } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler } from "chart.js";
-import { Info, CheckCircle2, AlertCircle, Clock, CreditCard, TrendingUp, Lightbulb, ShieldCheck, ChevronRight } from "lucide-react";
+import { Info, CheckCircle2, AlertCircle, Clock, CreditCard, TrendingUp, Lightbulb, ShieldCheck, ChevronRight, Lock } from "lucide-react";
 import { useBank } from "../context/BankContext";
+import { useAuth } from "../context/AuthContext";
+import { hasPermission } from "../utils/security";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler);
 
@@ -13,27 +15,27 @@ const SCORE_MAX = 900;
 const SCORE_RANGE = 600;
 
 const ZONES = [
-  { label: "Poor",      min: 300, max: 549, color: "#DC2626" },
-  { label: "Fair",      min: 550, max: 649, color: "#F59E0B" },
-  { label: "Good",      min: 650, max: 749, color: "#2563EB" },
+  { label: "Poor", min: 300, max: 549, color: "#DC2626" },
+  { label: "Fair", min: 550, max: 649, color: "#F59E0B" },
+  { label: "Good", min: 650, max: 749, color: "#2563EB" },
   { label: "Excellent", min: 750, max: 900, color: "#16A34A" },
 ];
 function getZone(score) { return ZONES.find((z) => score >= z.min && score <= z.max) ?? ZONES[0]; }
 
-const HISTORY_LABELS = ["Oct","Nov","Dec","Jan","Feb","Mar"];
-const HISTORY_DATA   = [710,718,725,731,738,742];
+const HISTORY_LABELS = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+const HISTORY_DATA = [710, 718, 725, 731, 738, 742];
 
 function GaugeChart({ score }) {
-  const zone     = getZone(score);
+  const zone = getZone(score);
   const gaugeRef = useRef(null);
   const segments = ZONES.map((z) => z.max - z.min + 1);
-  const filled   = score - SCORE_MIN;
-  const empty    = SCORE_RANGE - filled;
+  const filled = score - SCORE_MIN;
+  const empty = SCORE_RANGE - filled;
 
   const data = {
     datasets: [
       { data: segments, backgroundColor: ZONES.map((z) => z.color + "30"), borderColor: ZONES.map((z) => z.color + "80"), borderWidth: 1.5, borderRadius: 4, spacing: 2, weight: 2 },
-      { data: [filled, empty], backgroundColor: [zone.color, "transparent"], borderColor: [zone.color, "transparent"], borderWidth: [2,0], borderRadius: [6,0], weight: 3 },
+      { data: [filled, empty], backgroundColor: [zone.color, "transparent"], borderColor: [zone.color, "transparent"], borderWidth: [2, 0], borderRadius: [6, 0], weight: 3 },
     ],
   };
 
@@ -112,7 +114,7 @@ function HistoryChart() {
       data: HISTORY_DATA,
       borderColor: "#2563EB",
       backgroundColor: (ctx) => {
-        const g = ctx.chart.ctx.createLinearGradient(0,0,0,200);
+        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
         g.addColorStop(0, "rgba(37,99,235,0.15)");
         g.addColorStop(1, "rgba(37,99,235,0)");
         return g;
@@ -134,27 +136,52 @@ function HistoryChart() {
 }
 
 const SCORE_FACTORS = [
-  { icon: CheckCircle2, label: "Payment History",    value: "95%",   sub: "On-time payments",     barColor: "bg-success",    barPct: 95,   iconBg: "bg-success" },
-  { icon: CreditCard,   label: "Credit Utilisation", value: "38%",   sub: "Recommended < 30%",    barColor: "bg-yellow-400", barPct: 38,   iconBg: "bg-yellow-500" },
-  { icon: Clock,        label: "Credit Age",         value: "4 yrs", sub: "Average account age",  barColor: "bg-accent",     barPct: 65,   iconBg: "bg-accent" },
-  { icon: AlertCircle,  label: "Total Accounts",     value: "3",     sub: "Active credit lines",  barColor: "bg-secondary",  barPct: null, iconBg: "bg-secondary" },
+  { icon: CheckCircle2, label: "Payment History", value: "95%", sub: "On-time payments", barColor: "bg-success", barPct: 95, iconBg: "bg-success" },
+  { icon: CreditCard, label: "Credit Utilisation", value: "38%", sub: "Recommended < 30%", barColor: "bg-yellow-400", barPct: 38, iconBg: "bg-yellow-500" },
+  { icon: Clock, label: "Credit Age", value: "4 yrs", sub: "Average account age", barColor: "bg-accent", barPct: 65, iconBg: "bg-accent" },
+  { icon: AlertCircle, label: "Total Accounts", value: "3", sub: "Active credit lines", barColor: "bg-secondary", barPct: null, iconBg: "bg-secondary" },
 ];
 
 const TIPS = [
-  { icon: TrendingUp,  color: "text-success",    bg: "bg-success/5 border-success/20",   title: "Reduce credit utilisation",       body: "Keep credit card usage below 30% of the limit. Try paying your bill twice a month." },
-  { icon: ShieldCheck, color: "text-accent",     bg: "bg-accent/5 border-accent/20",     title: "Never miss a due date",           body: "Set auto-pay or reminders for all EMIs and credit card bills. Even one missed payment can drop your score by 50–100 points." },
-  { icon: Lightbulb,   color: "text-yellow-600", bg: "bg-yellow-50 border-yellow-200",   title: "Avoid multiple loan applications", body: "Each hard enquiry lowers your score. Space out loan/card applications and compare offers before applying." },
+  { icon: TrendingUp, color: "text-success", bg: "bg-success/5 border-success/20", title: "Reduce credit utilisation", body: "Keep credit card usage below 30% of the limit. Try paying your bill twice a month." },
+  { icon: ShieldCheck, color: "text-accent", bg: "bg-accent/5 border-accent/20", title: "Never miss a due date", body: "Set auto-pay or reminders for all EMIs and credit card bills. Even one missed payment can drop your score by 50–100 points." },
+  { icon: Lightbulb, color: "text-yellow-600", bg: "bg-yellow-50 border-yellow-200", title: "Avoid multiple loan applications", body: "Each hard enquiry lowers your score. Space out loan/card applications and compare offers before applying." },
 ];
 
 export default function CIBIL() {
   const { cibilScore } = useBank();
-  const score  = cibilScore ?? 742;
-  const zone   = getZone(score);
+  const { user } = useAuth();
+
+  const score = cibilScore ?? 742;
+  const zone = getZone(score);
   const loaded = usePageLoad();
   const [showTip, setShowTip] = useState(false);
   const pct = Math.round(((score - SCORE_MIN) / SCORE_RANGE) * 100);
 
   if (!loaded) return <PageSkeleton rows={3} />;
+
+  // Implementation of Access Control (RBAC)
+  // Only users with 'verified' role or higher can access detailed CIBIL analysis
+  if (!hasPermission(user, "verified")) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center page-enter max-w-md mx-auto">
+        <div className="w-16 h-16 rounded-2xl bg-danger/10 flex items-center justify-center mb-6">
+          <Lock size={32} className="text-danger" />
+        </div>
+        <h1 className="text-2xl font-bold text-text-main mb-2">Access Restricted</h1>
+        <p className="text-text-muted text-sm mb-8">
+          Detailed CIBIL analysis contains sensitive financial information.
+          To protect your data, this section is only available to <strong>Verified Users</strong>.
+        </p>
+        <button
+          onClick={() => alert("Identity Verification (KYC) simulation would start here.")}
+          className="w-full bg-accent hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+        >
+          <ShieldCheck size={18} /> Verify Your Identity
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto page-enter">
@@ -188,7 +215,7 @@ export default function CIBIL() {
           <GaugeChart score={score} />
           <ScaleLegend />
           <div className="mt-4 px-4 py-1.5 rounded-full text-sm font-semibold border"
-               style={{ color: zone.color, borderColor: zone.color + "50", backgroundColor: zone.color + "10" }}>
+            style={{ color: zone.color, borderColor: zone.color + "50", backgroundColor: zone.color + "10" }}>
             {zone.label} · {score} / {SCORE_MAX}
           </div>
           <div className="mt-4 w-full max-w-[240px] sm:max-w-[270px]">

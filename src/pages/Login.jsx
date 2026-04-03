@@ -18,8 +18,7 @@ function Field({ label, error, children }) {
 }
 
 const inputCls = (hasErr) =>
-  `w-full bg-bg-page border ${
-    hasErr ? "border-danger focus:ring-danger/30" : "border-border-card focus:ring-accent/30"
+  `w-full bg-bg-page border ${hasErr ? "border-danger focus:ring-danger/30" : "border-border-card focus:ring-accent/30"
   } rounded-xl px-4 py-3 text-text-main placeholder-text-muted text-sm
    focus:outline-none focus:ring-2 transition-all duration-150 min-h-[48px]`;
 
@@ -33,33 +32,41 @@ function validate(email, password) {
 }
 
 export default function Login() {
-  const { login }    = useAuth();
-  const navigate     = useNavigate();
-  const location     = useLocation();
-  const from         = location.state?.from?.pathname || "/dashboard";
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/dashboard";
 
-  const [email,      setEmail]      = useState("");
-  const [password,   setPassword]   = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [showPwd,    setShowPwd]    = useState(false);
-  const [errors,     setErrors]     = useState({});
-  const [loading,    setLoading]    = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [generalErr, setGeneralErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate(email, password);
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
+    setGeneralErr("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-    login({ email, rememberMe });
-    setLoading(false);
-    navigate(from, { replace: true });
+
+    try {
+      await new Promise((r) => setTimeout(r, 700));
+      await login({ email, password, rememberMe });
+      navigate(from, { replace: true });
+    } catch (err) {
+      setGeneralErr(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-start sm:items-center justify-center bg-bg-page px-4 py-8">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm text-left">
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-7">
@@ -75,6 +82,13 @@ export default function Login() {
         <div className="bg-bg-card border border-border-card rounded-2xl p-5 sm:p-7 shadow-sm">
           <h1 className="text-xl font-bold text-text-main mb-1">Welcome back</h1>
           <p className="text-text-muted text-sm mb-5">Sign in to your account</p>
+
+          {generalErr && (
+            <div className="mb-5 p-4 rounded-xl bg-danger/10 border border-danger/20 flex items-start gap-3">
+              <AlertCircle size={16} className="text-danger mt-0.5 flex-shrink-0" />
+              <p className="text-xs font-semibold text-danger leading-relaxed">{generalErr}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <Field label="Email address" error={errors.email}>

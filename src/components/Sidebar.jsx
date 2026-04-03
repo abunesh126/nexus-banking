@@ -6,6 +6,7 @@ import {
   PieChart,
   Award,
   BookOpen,
+  CreditCard, // Innovation: Virtual Cards
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -14,11 +15,12 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 const NAV_LINKS = [
-  { to: "/dashboard", label: "Dashboard",  icon: LayoutDashboard },
-  { to: "/payments",  label: "Payments",   icon: Send },
-  { to: "/cibil",    label: "CIBIL Score", icon: PieChart },
-  { to: "/rewards",  label: "Rewards",     icon: Award },
-  { to: "/passbook", label: "Passbook",    icon: BookOpen },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/payments", label: "Payments", icon: Send },
+  { to: "/cards", label: "Virtual Cards", icon: CreditCard }, // INNOVATION
+  { to: "/cibil", label: "CIBIL Score", icon: PieChart },
+  { to: "/rewards", label: "Rewards", icon: Award },
+  { to: "/passbook", label: "Passbook", icon: BookOpen },
 ];
 
 export default function Sidebar({ onNavClick }) {
@@ -87,10 +89,9 @@ export default function Sidebar({ onNavClick }) {
               group flex items-center gap-3 rounded-xl text-sm font-medium
               transition-all duration-150 relative
               ${collapsed ? "justify-center px-0 py-3" : "px-3.5 py-2.5"}
-              ${
-                isActive
-                  ? "bg-accent text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
+              ${isActive
+                ? "bg-accent text-white"
+                : "text-white/70 hover:bg-white/10 hover:text-white"
               }
             `}
           >
@@ -131,7 +132,7 @@ export default function Sidebar({ onNavClick }) {
       {user && (
         <div className={`border-t border-white/10 ${collapsed ? "p-2" : "p-3"}`}>
           <div className={`flex items-center gap-2.5 mb-2 ${collapsed ? "justify-center" : ""}`}
-               title={collapsed ? user.name : undefined}>
+            title={collapsed ? user.name : undefined}>
             <div className="
               w-8 h-8 flex-shrink-0 rounded-full
               bg-accent flex items-center justify-center

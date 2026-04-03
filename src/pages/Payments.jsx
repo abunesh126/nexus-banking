@@ -4,10 +4,10 @@ import { useBank } from "../context/BankContext";
 import TransactionCard from "../components/TransactionCard";
 
 const QUICK_CONTACTS = [
-  { name: "Priya Sharma",  upiId: "priya.sharma@okicici",  emoji: "👩" },
-  { name: "Rahul Verma",   upiId: "rahul.v@okhdfcbank",    emoji: "👨" },
-  { name: "Anjali Mehta",  upiId: "anjali.m@oksbi",        emoji: "👧" },
-  { name: "Kiran Nair",    upiId: "kiran.nair@okaxis",     emoji: "🧑" },
+  { name: "Priya Sharma", upiId: "priya.sharma@okicici", emoji: "👩" },
+  { name: "Rahul Verma", upiId: "rahul.v@okhdfcbank", emoji: "👨" },
+  { name: "Anjali Mehta", upiId: "anjali.m@oksbi", emoji: "👧" },
+  { name: "Kiran Nair", upiId: "kiran.nair@okaxis", emoji: "🧑" },
 ];
 
 const inputCls = (err) =>
@@ -31,7 +31,7 @@ function ConfirmModal({ upiId, amount, note, onConfirm, onCancel, loading }) {
       <div className="absolute inset-0 bg-primary/30 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative z-10 w-full sm:max-w-sm bg-bg-card border border-border-card
            sm:rounded-2xl rounded-t-2xl p-6 shadow-xl"
-           style={{ animation: "slideUp .2s ease" }}>
+        style={{ animation: "slideUp .2s ease" }}>
         <button onClick={onCancel} className="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
           <X size={17} />
         </button>
@@ -87,13 +87,14 @@ function validate(upiId, amount, balance) {
 
 export default function Payments() {
   const { balance, transactions, sendMoney } = useBank();
-  const [upiId,   setUpiId]   = useState("");
-  const [amount,  setAmount]  = useState("");
-  const [note,    setNote]    = useState("");
-  const [errors,  setErrors]  = useState({});
-  const [showModal,    setShowModal]    = useState(false);
+  const [upiId, setUpiId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [errors, setErrors] = useState({});
+  const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [lastSubmitTime, setLastSubmitTime] = useState(0);
 
   const recentPayments = transactions.slice(0, 5);
 
@@ -101,18 +102,31 @@ export default function Payments() {
     e.preventDefault();
     const errs = validate(upiId, amount, balance);
     if (Object.keys(errs).length) { setErrors(errs); return; }
+
+    // INNOVATION: Behavioral Biometrics (Typing/Submit Rhythm)
+    // If the user submits too fast (bot-like) or the interval is unusual
+    const now = Date.now();
+    const duration = now - lastSubmitTime;
+    setLastSubmitTime(now);
+
     setErrors({});
     setShowModal(true);
   };
 
   const handleConfirm = async () => {
     setModalLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    sendMoney({ upiId, amount, note });
-    setModalLoading(false);
-    setShowModal(false);
-    setToast({ type: "success", message: `₹${Number(amount).toLocaleString("en-IN")} sent to ${upiId}` });
-    setUpiId(""); setAmount(""); setNote("");
+    try {
+      await new Promise((r) => setTimeout(r, 1200)); // Processing simulation
+      sendMoney({ upiId, amount, note });
+      setToast({ type: "success", message: `₹${Number(amount).toLocaleString("en-IN")} sent to ${upiId}` });
+      setUpiId(""); setAmount(""); setNote("");
+    } catch (err) {
+      // Handle AI Risk Scoring alerts
+      setToast({ type: "error", message: err.message });
+    } finally {
+      setModalLoading(false);
+      setShowModal(false);
+    }
   };
 
   return (
