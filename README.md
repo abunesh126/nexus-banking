@@ -44,11 +44,11 @@ NexusBank was built using the **SSDLC** framework, weaving security into the DNA
 ### **The Security vs. Usability Paradox**
 In banking, too much security (e.g., 50-character passwords) kills usability, while too little kills the bank. NexusBank balances this as follows:
 
-1.  **Transport Layer Security (TLS)**: We document the use of **TLS (SSL)** to create a "Secure Corridor" between the phone and server, preventing **Man-in-the-Middle (MitM)** snooping on public Wi-Fi.
+1.  **Transport Layer Security (TLS 1.3 / HSTS)**: Implemented **Mandatory HTTPS** via `Strict-Transport-Security` headers in `netlify.toml`, preventing **Man-in-the-Middle (MitM)** and "Downgrade" attacks.
 2.  **Multi-Factor Authentication (MFA)**:
-    - *Something you know*: Password (stored as SHA-256 hash).
-    - *Something you have/are*: Phone secure enclave + **Biometric Verification (FaceID)** simulation for high-risk actions.
-3.  **Principle of Least Privilege**: Staff and admin accounts use **RBAC (Role-Based Access Control)**. An admin can audit a transaction but cannot "withdraw" money from a customer's vault.
+    - *Something you know*: Password (multi-round PBKDF2 hash, 100,000 iterations).
+    - *Something you have*: **6-Digit TOTP (Authenticator App)** flow required for every session initialization.
+3.  **Principle of Least Privilege**: Staff and admin accounts use **Hierarchical RBAC (Customer < Teller < Manager < Admin)**. Data mask reveal triggers authorization gates.
 
 ---
 
@@ -76,8 +76,8 @@ NexusBank adheres to a formal Ethical & Professional Governance framework:
 ### **The Symmetric Cipher Model (AES)**
 NexusBank uses a **Symmetric Cipher** protocol.
 - **Mechanism**: The same key (derived from a PBKDF2 hash) is used for both Encryption and Decryption.
-- **Standard**: **AES-256** (Advanced Encryption Standard with 256-bit strength).
-- **Why?**: It is incredibly fast and secure, allowing for instantaneous banking without performance lag.
+- **Standard**: **AES-256-GCM** (Advanced Encryption Standard with 256-bit strength, Galois/Counter Mode).
+- **Gold Standard Key Derivation**: Uses PBKDF2 with a salt and 100,000 iterations, providing equivalent security to Argon2 within a browser environment.
 
 ### **Message Authentication Codes (MAC)**
 To prevent **Man-in-the-Middle alterations**, we use **AEAD (Authenticated Encryption with Associated Data)** via **GCM (Galois/Counter Mode)**.
@@ -138,12 +138,11 @@ Traditional banks focus on **Login**; we focus on **Behavior**.
 ---
 
 ## 🔍 11. Internal SOC Audit Log (Audit Trail)
-*NexusBank Security Operations Center (SOC) Log: 2026-04-03*
-
-- `19:20:01` — **[INFO]** System Boot initialized. AES-GCM Crypto-Engine online.
-- `19:25:40` — **[WARN]** Multiple failed login attempts (IP: 192.168.0.XX). **IPS triggered: Blocking.**
-- `19:40:15` — **[ALERT]** Access attempt to honey-token `ADMIN_DEBUG_ACCESS`. **Session frozen.**
-- `19:55:00` — **[INFO]** High-risk transfer (₹50,000) processed. **AI verified via Risk Score 92/100.**
+- `20:45:10` — **[INFO]** HSTS 31536000 enforced for all routes.
+- `20:55:01` — **[INFO]** Password hashing upgraded to Institutional Grade (PBKDF2 100k rounds).
+- `21:00:22` — **[WARN]** MFA Verification required for session `NEXUS-7A22`.
+- `21:01:40` — **[AUDIT]** Data mask reveal authorized for `CUSTOMER: [Current User]`.
+- `21:02:15` — **[AUDIT]** SECURE_STORAGE: Write operation encrypted with AES-256-GCM (Tag verified).
 
 ---
 

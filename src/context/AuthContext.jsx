@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { secureStorage } from "../utils/secureStorage";
+import { hashPassword, ROLES } from "../utils/security";
 
 const AuthContext = createContext(null);
 
@@ -15,8 +16,10 @@ export function AuthProvider({ children }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
 
-  const MAX_ATTEMPTS = 3;
+  const MAX_ATTEMPTS = 5;
 
   // Initialize: Load secure session asynchronously
   useEffect(() => {
@@ -48,23 +51,27 @@ export function AuthProvider({ children }) {
 
   /**
    * login({ email, password, rememberMe })
+   * Hardened with MFA and IDS simulations.
    */
   const login = async ({ email, password, _rememberMe }) => {
     if (isBlocked) {
-      throw new Error("Security Alert: This IP address is blocked due to multiple failed login attempts.");
+      throw new Error("ACCOUNT BLOCKED: Too many failed attempts. Contact support.");
     }
 
-    // IDS Simulation: If password is empty or "wrong" (simulated), increment failed count
-    if (!password || password.length < 4) {
-      const newCount = failedAttempts + 1;
-      setFailedAttempts(newCount);
-      if (newCount >= MAX_ATTEMPTS) {
-        setIsBlocked(true);
-      }
-      throw new Error(`Invalid credentials. ${MAX_ATTEMPTS - newCount} attempts remaining before IP block.`);
+    // Adaptive/Risk-Based Auth Simulation: 
+    // If it's a new login, simulate MFA trigger.
+    const isNewLogin = true; // In a real app, check IP/Device fingerprint
+
+    // 1. Password Hashing (Institutional Standard)
+    const _hashed = await hashPassword(password);
+
+    // Simulating validation
+    if (!password || password.length < 8) {
+      setFailedAttempts(prev => prev + 1);
+      if (failedAttempts + 1 >= MAX_ATTEMPTS) setIsBlocked(true);
+      throw new Error(`Invalid credentials. ${MAX_ATTEMPTS - (failedAttempts + 1)} attempts left.`);
     }
 
-    // Reset IDS on success
     setFailedAttempts(0);
 
     let userData = await secureStorage.getItem(STORAGE_KEY);
@@ -72,13 +79,36 @@ export function AuthProvider({ children }) {
       userData = {
         name: email.split("@")[0],
         email,
-        phone: "",
+        phone: "+91 ••••• ••123",
         avatar: getInitials(email.split("@")[0]),
         joinedAt: new Date().toISOString(),
-        role: "user",
+        role: ROLES.CUSTOMER,
+        mfaEnabled: true,
       };
     }
+
+    if (userData.mfaEnabled && isNewLogin) {
+      setPendingUser(userData);
+      setMfaRequired(true);
+      return { mfaRequired: true };
+    }
+
     setUser(userData);
+    return { success: true };
+  };
+
+  /**
+   * Verifies the 6-digit TOTP code.
+   */
+  const verifyMFA = async (code) => {
+    // In a real app, this would be validated via backend/TOTP library
+    if (code === "123456") {
+      setUser(pendingUser);
+      setMfaRequired(false);
+      setPendingUser(null);
+      return true;
+    }
+    throw new Error("Invalid MFA code. Please try again.");
   };
 
   /**
@@ -91,20 +121,31 @@ export function AuthProvider({ children }) {
       phone,
       avatar: getInitials(fullName),
       joinedAt: new Date().toISOString(),
-      role: "user",
+      role: ROLES.CUSTOMER,
+      mfaEnabled: true,
     };
     setUser(userData);
   };
 
   const logout = () => {
     setUser(null);
-    sessionStorage.removeItem(STORAGE_KEY);
+    setMfaRequired(false);
+    setPendingUser(null);
   };
 
-  if (!isLoaded) return null; // Or a splash screen
+  if (!isLoaded) return null;
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, isAuthenticated, login, logout, signup }}>
+    <AuthContext.Provider value={{
+      user,
+      isLoggedIn,
+      isAuthenticated,
+      login,
+      logout,
+      signup,
+      verifyMFA,
+      mfaRequired
+    }}>
       {children}
     </AuthContext.Provider>
   );

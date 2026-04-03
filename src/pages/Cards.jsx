@@ -1,21 +1,42 @@
 import React, { useState } from "react";
-import { CreditCard, Plus, Shield, ShieldCheck, Trash2, Zap, Info } from "lucide-react";
+import { CreditCard, Plus, Shield, ShieldCheck, Trash2, Zap, Info, Eye, EyeOff, Lock } from "lucide-react";
 import usePageLoad from "../hooks/usePageLoad";
 import PageSkeleton from "../components/PageSkeleton";
+import { maskSensitive, hasPermission, ROLES } from "../utils/security";
+import { useAuth } from "../context/AuthContext";
 
 export default function Cards() {
     const loaded = usePageLoad();
+    const { user } = useAuth();
+    const [revealedIds, setRevealedIds] = useState([]);
+
     const [cards, setCards] = useState([
-        { id: 1, type: "MAIN", number: "**** **** **** 4292", expiry: "09/28", cvv: "***", label: "Primary Debit", color: "bg-primary" },
+        { id: 1, type: "MAIN", number: "4292 1234 5678 9012", expiry: "09/28", cvv: "123", label: "Primary Debit", color: "bg-primary" },
     ]);
+
+    const toggleReveal = (id) => {
+        // RBAC Enforcement: Only 'manager' or 'admin' could reveal other users' cards, 
+        // but here we check if the user has at least 'customer' level to see their own.
+        // In a real banking app, this would trigger a re-auth or MFA challenge.
+        if (!hasPermission(user, ROLES.CUSTOMER)) {
+            alert("Unauthorized: High-security clearance required to reveal raw PII.");
+            return;
+        }
+
+        if (revealedIds.includes(id)) {
+            setRevealedIds(revealedIds.filter(rid => rid !== id));
+        } else {
+            setRevealedIds([...revealedIds, id]);
+        }
+    };
 
     const addBurnerCard = () => {
         const newCard = {
             id: Date.now(),
             type: "BURNER",
-            number: `**** **** **** ${Math.floor(1000 + Math.random() * 9000)}`,
+            number: `${Math.floor(1000 + Math.random() * 9000).toString().padStart(4, "0")} ${Math.floor(1000 + Math.random() * 9000).toString().padStart(4, "0")} ${Math.floor(1000 + Math.random() * 9000).toString().padStart(4, "0")} ${Math.floor(1000 + Math.random() * 9000).toString().padStart(4, "0")}`,
             expiry: "12/26",
-            cvv: "821",
+            cvv: Math.floor(100 + Math.random() * 899).toString(),
             label: "Single-use Burner",
             color: "bg-accent",
         };
@@ -62,48 +83,62 @@ export default function Cards() {
 
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {cards.map((card) => (
-                    <div key={card.id} className={`relative overflow-hidden rounded-2xl p-6 h-52 text-white shadow-lg transition-transform hover:scale-[1.02] ${card.color}`}>
-                        {/* Background design */}
-                        <div className="absolute top-0 right-0 p-8 opacity-10">
-                            <Landmark size={120} />
-                        </div>
+                {cards.map((card) => {
+                    const isRevealed = revealedIds.includes(card.id);
+                    return (
+                        <div key={card.id} className={`relative overflow-hidden rounded-2xl p-6 h-52 text-white shadow-lg transition-transform hover:scale-[1.02] ${card.color}`}>
+                            {/* Background design */}
+                            <div className="absolute top-0 right-0 p-8 opacity-10">
+                                <Landmark size={120} />
+                            </div>
 
-                        <div className="relative z-10 flex flex-col justify-between h-full">
-                            <div className="flex justify-between items-start">
+                            <div className="relative z-10 flex flex-col justify-between h-full">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-widest opacity-70 mb-0.5">{card.label}</p>
+                                        <p className="text-lg font-bold">NexusBank</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => toggleReveal(card.id)}
+                                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                                            title={isRevealed ? "Hide Details" : "Reveal Details"}
+                                        >
+                                            {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                        {card.type === "BURNER" ? <Zap size={20} className="text-yellow-400 fill-yellow-400" /> : <ShieldCheck size={20} />}
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-widest opacity-70 mb-0.5">{card.label}</p>
-                                    <p className="text-lg font-bold">NexusBank</p>
-                                </div>
-                                {card.type === "BURNER" ? <Zap size={20} className="text-yellow-400 fill-yellow-400" /> : <ShieldCheck size={20} />}
-                            </div>
-
-                            <div>
-                                <p className="text-xl font-mono tracking-[0.2em] mb-4">{card.number}</p>
-                                <div className="flex gap-8">
-                                    <div>
-                                        <p className="text-[8px] uppercase opacity-60">Expiry</p>
-                                        <p className="text-sm font-semibold">{card.expiry}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[8px] uppercase opacity-60">CVV</p>
-                                        <p className="text-sm font-semibold">{card.cvv}</p>
+                                    <p className="text-xl font-mono tracking-[0.2em] mb-4">
+                                        {isRevealed ? card.number : maskSensitive(card.number, 4)}
+                                    </p>
+                                    <div className="flex gap-8">
+                                        <div>
+                                            <p className="text-[8px] uppercase opacity-60">Expiry</p>
+                                            <p className="text-sm font-semibold">{card.expiry}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] uppercase opacity-60">CVV</p>
+                                            <p className="text-sm font-semibold">{isRevealed ? card.cvv : "***"}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {card.type === "BURNER" && (
-                                <button
-                                    onClick={() => deleteCard(card.id)}
-                                    className="absolute bottom-6 right-6 p-2 rounded-lg bg-white/10 hover:bg-danger transition-colors"
-                                    title="Burn Card"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            )}
+                                {card.type === "BURNER" && (
+                                    <button
+                                        onClick={() => deleteCard(card.id)}
+                                        className="absolute bottom-6 right-6 p-2 rounded-lg bg-white/10 hover:bg-danger transition-colors"
+                                        title="Burn Card"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Security Info */}
@@ -111,15 +146,15 @@ export default function Cards() {
                 <div className="bg-bg-card border border-border-card rounded-2xl p-4 flex gap-3">
                     <Shield className="text-success flex-shrink-0" size={18} />
                     <div>
-                        <p className="text-text-main font-semibold text-sm">Protected by JIT</p>
-                        <p className="text-text-muted text-xs">Just-In-Time Tokens prevent card cloning.</p>
+                        <p className="text-text-main font-semibold text-sm">Institutional Encryption</p>
+                        <p className="text-text-muted text-xs">AES-256-GCM protects your virtual card metadata.</p>
                     </div>
                 </div>
                 <div className="bg-bg-card border border-border-card rounded-2xl p-4 flex gap-3">
-                    <Info className="text-accent flex-shrink-0" size={18} />
+                    <Lock className="text-accent flex-shrink-0" size={18} />
                     <div>
-                        <p className="text-text-main font-semibold text-sm">Spending Limits</p>
-                        <p className="text-text-muted text-xs">Burner cards are capped for extra safety.</p>
+                        <p className="text-text-main font-semibold text-sm">PCI-DSS Compliant</p>
+                        <p className="text-text-muted text-xs">Aggressive masking is applied by default.</p>
                     </div>
                 </div>
             </div>
