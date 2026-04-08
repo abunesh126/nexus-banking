@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Star, Gift, Zap, ChevronRight, Clock, CheckCircle2, ArrowDownLeft, ArrowUpRight, ShoppingBag, Plane, Coffee, Film, Smartphone, UtensilsCrossed } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, Gift, Zap, ChevronRight, Clock, CheckCircle2, ArrowDownLeft, ArrowUpRight, ShoppingBag, Plane, Coffee, Film, Smartphone, UtensilsCrossed, X, AlertCircle, Loader2 } from "lucide-react";
 import { useBank } from "../context/BankContext";
 import PageSkeleton from "../components/PageSkeleton";
 import usePageLoad from "../hooks/usePageLoad";
@@ -21,7 +21,62 @@ const POINTS_HISTORY = [
   { id: 5, type: "earn",   title: "Cashback Reward",        points: 45,   date: "15 Mar 2026" },
 ];
 
-function OfferCard({ offer }) {
+function Toast({ type, message, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, [onClose]);
+  const isSuccess = type === "success";
+  return (
+    <div className={`fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-lg border
+      ${isSuccess ? "bg-bg-card border-success/30" : "bg-bg-card border-danger/30"}
+      animate-[slideUp_.2s_ease]`}>
+      {isSuccess ? <CheckCircle2 size={17} className="text-success flex-shrink-0" /> : <AlertCircle size={17} className="text-danger flex-shrink-0" />}
+      <p className="text-sm font-medium text-text-main flex-1 whitespace-pre-wrap">{message}</p>
+      <button onClick={onClose} className="ml-2 text-text-muted hover:text-text-main min-w-[32px] flex items-center justify-center"><X size={13} /></button>
+    </div>
+  );
+}
+
+function RedeemModal({ pointsOwned, onConfirm, onCancel, loading }) {
+  const [pts, setPts] = useState("");
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4">
+      <div className="absolute inset-0 bg-primary/30 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full sm:max-w-sm bg-bg-card border border-border-card
+           sm:rounded-2xl rounded-t-2xl p-6 shadow-xl"
+        style={{ animation: "slideUp .2s ease" }}>
+        <button onClick={onCancel} className="absolute top-4 right-4 text-text-muted hover:text-text-main p-2"><X size={17} /></button>
+        <h3 className="text-base font-bold text-text-main mb-2">Redeem Points</h3>
+        <p className="text-sm text-text-muted mb-4">You have {pointsOwned} pts. 4 pts = ₹1 cashback.</p>
+        <div className="space-y-4 mb-6">
+          <div className="relative">
+            <input type="number" min="100" max={pointsOwned} value={pts}
+              onChange={(e) => setPts(e.target.value)}
+              className="w-full bg-bg-page border border-border-card focus:ring-accent/30 rounded-xl px-4 py-3 text-text-main placeholder-text-muted text-sm focus:outline-none focus:ring-2 transition-all min-h-[48px]"
+              placeholder="Enter points (min 100)" />
+          </div>
+          {pts >= 100 && (
+             <div className="bg-success/10 border border-success/20 rounded-xl p-3 text-center">
+               <p className="text-success text-sm font-semibold">You'll get ₹{Math.floor(pts / 4)} cashback</p>
+             </div>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            className="flex-1 border border-border-card text-text-muted hover:bg-bg-page rounded-xl py-3 text-sm font-medium transition-all min-h-[48px]">
+            Cancel
+          </button>
+          <button onClick={() => onConfirm(pts)} disabled={loading || pts < 100 || pts > pointsOwned}
+            className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-60 text-white rounded-xl py-3 text-sm font-semibold transition-all min-h-[48px]">
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <Gift size={15} />}
+            Redeem
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OfferCard({ offer, onClaim }) {
   const [claimed, setClaimed] = useState(false);
   const Icon = offer.icon;
   return (
@@ -46,7 +101,10 @@ function OfferCard({ offer }) {
         </span>
         {offer.pts > 0 && <span className="text-xs text-yellow-600 font-semibold flex-shrink-0 ml-2">+{offer.pts} pts</span>}
       </div>
-      <button onClick={() => setClaimed(true)} disabled={claimed}
+      <button onClick={() => {
+        setClaimed(true);
+        onClaim(offer);
+      }} disabled={claimed}
         className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 min-h-[44px]
           ${claimed ? "bg-success/10 text-success border border-success/30 cursor-default" : "bg-accent hover:bg-accent-hover text-white shadow-sm"}`}>
         {claimed ? <span className="flex items-center justify-center gap-1.5"><CheckCircle2 size={13} /> Claimed</span> : "Claim Offer"}
@@ -76,13 +134,31 @@ function HistoryRow({ item }) {
 }
 
 export default function Rewards() {
-  const { rewardPoints } = useBank();
+  const { rewardPoints, redeemPoints } = useBank();
   const loaded = usePageLoad();
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [toast, setToast] = useState(null);
+  
   if (!loaded) return <PageSkeleton rows={3} />;
 
   const rupeeValue = Math.floor(rewardPoints / 4);
 
   return (
+    <>
+      {showModal && <RedeemModal pointsOwned={rewardPoints} loading={isRedeeming} onCancel={() => setShowModal(false)} onConfirm={async (pts) => {
+          try {
+            setIsRedeeming(true);
+            const cash = await redeemPoints(pts);
+            setToast({ type: "success", message: `Successfully redeemed ${pts} points for ₹${cash} cashback!` });
+            setShowModal(false);
+          } catch(e) {
+             setToast({ type: "error", message: "Redemption failed: " + e.message });
+          } finally {
+            setIsRedeeming(false);
+          }
+      }} />}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
     <div className="space-y-4 sm:space-y-5 max-w-4xl mx-auto page-enter">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -113,7 +189,16 @@ export default function Rewards() {
               <p className="text-white/60 text-sm mt-1.5">≈ ₹{rupeeValue.toLocaleString("en-IN")} cashback value</p>
             </div>
             <div className="flex sm:flex-col gap-2 sm:items-end">
-              <button className="flex items-center gap-2 bg-white text-primary font-semibold px-4 sm:px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-150 shadow-sm text-sm min-h-[44px]">
+              <button 
+                onClick={() => {
+                   if (rewardPoints < 100) {
+                     setToast({ type: "error", message: "Minimum 100 points required to redeem." });
+                     return;
+                   }
+                   setShowModal(true);
+                }}
+                disabled={rewardPoints < 100}
+                className="flex items-center gap-2 bg-white text-primary font-semibold px-4 sm:px-5 py-2.5 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all duration-150 shadow-sm text-sm min-h-[44px]">
                 <Gift size={14} /> Redeem Points
               </button>
               <p className="text-white/50 text-xs self-center">4 pts = ₹1</p>
@@ -155,7 +240,9 @@ export default function Rewards() {
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-          {OFFERS.map((o) => <OfferCard key={o.id} offer={o} />)}
+          {OFFERS.map((o) => <OfferCard key={o.id} offer={o} onClaim={(offer) => {
+            setToast({ type: "success", message: `Offer Claimed! Use promo code: NEXUS-${offer.brand.toUpperCase()}-2026\nat checkout on ${offer.brand}.`});
+          }} />)}
         </div>
       </div>
 
@@ -166,6 +253,8 @@ export default function Rewards() {
           {POINTS_HISTORY.map((item) => <HistoryRow key={item.id} item={item} />)}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
+

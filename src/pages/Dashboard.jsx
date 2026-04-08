@@ -3,13 +3,64 @@ import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from "chart.js";
 import {
   ShieldCheck, ArrowRightLeft, PlusCircle, PieChart, Award,
-  Smartphone, BookOpen, ChevronRight, TrendingUp, TrendingDown, Wallet,
+  Smartphone, BookOpen, ChevronRight, TrendingUp, TrendingDown, Wallet, X, Loader2, AlertCircle, CheckCircle2
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useBank, spendingByCategory } from "../context/BankContext";
+import { useBank } from "../context/BankContext";
 import TransactionCard from "../components/TransactionCard";
 import PageSkeleton from "../components/PageSkeleton";
 import usePageLoad from "../hooks/usePageLoad";
+
+function Toast({ type, message, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 4000); return () => clearTimeout(t); }, [onClose]);
+  const isSuccess = type === "success";
+  return (
+    <div className={`fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-lg border
+      ${isSuccess ? "bg-bg-card border-success/30" : "bg-bg-card border-danger/30"}
+      animate-[slideUp_.2s_ease]`}>
+      {isSuccess ? <CheckCircle2 size={17} className="text-success flex-shrink-0" /> : <AlertCircle size={17} className="text-danger flex-shrink-0" />}
+      <p className="text-sm font-medium text-text-main flex-1 whitespace-pre-wrap">{message}</p>
+      <button onClick={onClose} className="ml-2 text-text-muted hover:text-text-main min-w-[32px] flex items-center justify-center"><X size={13} /></button>
+    </div>
+  );
+}
+
+function AddMoneyModal({ onConfirm, onCancel, loading }) {
+  const [amount, setAmount] = useState("");
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4">
+      <div className="absolute inset-0 bg-primary/30 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full sm:max-w-sm bg-bg-card border border-border-card
+           sm:rounded-2xl rounded-t-2xl p-6 shadow-xl"
+        style={{ animation: "slideUp .2s ease" }}>
+        <button onClick={onCancel} className="absolute top-4 right-4 text-text-muted hover:text-text-main p-2"><X size={17} /></button>
+        <h3 className="text-base font-bold text-text-main mb-2">Add Money</h3>
+        <p className="text-sm text-text-muted mb-4">Deposit funds directly to your wallet.</p>
+        <div className="space-y-4 mb-6">
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-semibold">₹</span>
+            <input type="number" min="1" value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-bg-page border border-border-card focus:ring-accent/30 rounded-xl pl-8 pr-4 py-3 text-text-main placeholder-text-muted text-sm focus:outline-none focus:ring-2 transition-all min-h-[48px]"
+              placeholder="0.00" />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            className="flex-1 border border-border-card text-text-muted hover:bg-bg-page rounded-xl py-3 text-sm font-medium transition-all min-h-[48px]">
+            Cancel
+          </button>
+          <button onClick={() => onConfirm(amount)} disabled={loading || !amount || Number(amount) <= 0}
+            className="flex-1 flex items-center justify-center gap-2 bg-success hover:bg-green-700 disabled:opacity-60 text-white rounded-xl py-3 text-sm font-semibold transition-all min-h-[48px]">
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <PlusCircle size={15} />}
+            Deposit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -42,9 +93,11 @@ function QuickAction({ icon: Icon, label, color, onClick }) {
   );
 }
 
-function SpendingChart() {
-  const labels = Object.keys(spendingByCategory);
-  const data   = Object.values(spendingByCategory);
+function SpendingChart({ spending = {} }) {
+  const defaultSpending = { Food: 0, Shopping: 0, Bills: 0, Travel: 0, Entertainment: 0 };
+  const merged = { ...defaultSpending, ...spending };
+  const labels = Object.keys(merged);
+  const data   = Object.values(merged);
 
   const chartData = {
     labels,
@@ -89,9 +142,12 @@ function SpendingChart() {
 
 export default function Dashboard() {
   const { user }   = useAuth();
-  const { balance, transactions, cibilScore, rewardPoints } = useBank();
+  const { balance, transactions, cibilScore, rewardPoints, spendingByCategory, addMoney } = useBank();
   const navigate   = useNavigate();
   const loaded     = usePageLoad();
+  const [showAddMoney, setShowAddMoney] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [toast, setToast] = useState(null);
 
   if (!loaded) return <PageSkeleton rows={4} />;
 
@@ -108,6 +164,20 @@ export default function Dashboard() {
   ];
 
   return (
+    <>
+      {showAddMoney && <AddMoneyModal loading={isAdding} onCancel={() => setShowAddMoney(false)} onConfirm={async (amount) => {
+          try {
+            setIsAdding(true);
+            await addMoney(amount);
+            setToast({ type: "success", message: `Successfully deposited ₹${Number(amount).toLocaleString('en-IN')}!` });
+            setShowAddMoney(false);
+          } catch(e) {
+             setToast({ type: "error", message: "Deposit failed: " + e.message });
+          } finally {
+            setIsAdding(false);
+          }
+      }} />}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
     <div className="space-y-4 sm:space-y-5 max-w-5xl mx-auto page-enter">
 
       {/* Welcome */}
@@ -144,7 +214,9 @@ export default function Dashboard() {
               className="flex items-center gap-1.5 px-4 py-2.5 bg-white text-primary font-semibold text-sm rounded-xl hover:bg-gray-50 transition-all duration-150 shadow-sm min-h-[44px]">
               <ArrowRightLeft size={14} /> Transfer
             </button>
-            <button className="flex items-center gap-1.5 px-4 py-2.5 bg-white/15 text-white font-semibold text-sm rounded-xl hover:bg-white/25 border border-white/20 transition-all duration-150 min-h-[44px]">
+            <button 
+              onClick={() => setShowAddMoney(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-white/15 text-white font-semibold text-sm rounded-xl hover:bg-white/25 border border-white/20 transition-all duration-150 min-h-[44px]">
               <PlusCircle size={14} /> Add Money
             </button>
           </div>
@@ -168,7 +240,7 @@ export default function Dashboard() {
             <h2 className="text-sm font-semibold text-text-main">Spending Summary</h2>
             <span className="text-xs text-text-muted bg-bg-page border border-border-card px-2.5 py-1 rounded-lg">Mar 2026</span>
           </div>
-          <SpendingChart />
+          <SpendingChart spending={spendingByCategory} />
           <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border-card flex items-center justify-between">
             <p className="text-text-muted text-xs">Total spent</p>
             <p className="text-text-main text-sm font-bold">₹{monthlyDebit.toLocaleString("en-IN")}</p>
@@ -220,5 +292,6 @@ export default function Dashboard() {
         </button>
       </div>
     </div>
+    </>
   );
 }

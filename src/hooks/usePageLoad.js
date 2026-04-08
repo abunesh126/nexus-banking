@@ -5,7 +5,7 @@ import { useLocation } from "react-router-dom";
  * usePageLoad — returns false for DELAY_MS, then true.
  * Resets every time the route changes, creating a per-page skeleton.
  */
-const DELAY_MS = 800;
+const DELAY_MS = 0;
 
 export default function usePageLoad() {
   const { pathname } = useLocation();

@@ -1,104 +1,296 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { secureStorage } from "../utils/secureStorage";
+import { useAuth } from "./AuthContext";
+import { supabase } from "../lib/supabase";
+import {
+  getAccount,
+  getTransactions,
+  createTransaction,
+  deductBalance,
+  addMoney as addMoneyDB,
+  getRewards,
+  updateRewards,
+  redeemRewards,
+  writeAuditLog,
+} from "../lib/database";
 
 const BankContext = createContext(null);
 
-const BAL_KEY = "nexusbank_balance";
-const TXN_KEY = "nexusbank_transactions";
-
-/* ── 10 rich mock transactions ── */
-const INITIAL_TRANSACTIONS = [
-  { id: 1, type: "credit", title: "Salary Credit", merchant: "Infosys Ltd.", amount: 124500, date: "2026-03-28", category: "Income", icon: "💼" },
-  { id: 2, type: "debit", title: "Amazon Shopping", merchant: "Amazon India", amount: 3499, date: "2026-03-27", category: "Shopping", icon: "🛒" },
-  { id: 3, type: "debit", title: "Electricity Bill", merchant: "BESCOM", amount: 1250, date: "2026-03-25", category: "Bills", icon: "⚡" },
-  { id: 4, type: "credit", title: "Freelance Payment", merchant: "Upwork Inc.", amount: 18000, date: "2026-03-22", category: "Income", icon: "💻" },
-  { id: 5, type: "debit", title: "Zomato Order", merchant: "Zomato", amount: 680, date: "2026-03-21", category: "Food", icon: "🍔" },
-  { id: 6, type: "debit", title: "Netflix Subscription", merchant: "Netflix", amount: 649, date: "2026-03-20", category: "Entertainment", icon: "🎬" },
-  { id: 7, type: "debit", title: "Uber Ride", merchant: "Uber India", amount: 320, date: "2026-03-19", category: "Travel", icon: "🚗" },
-  { id: 8, type: "debit", title: "Swiggy Instamart", merchant: "Swiggy", amount: 920, date: "2026-03-17", category: "Food", icon: "🛍️" },
-  { id: 9, type: "credit", title: "Cashback Reward", merchant: "NexusBank", amount: 450, date: "2026-03-15", category: "Rewards", icon: "🎁" },
-  { id: 10, type: "debit", title: "Airtel Recharge", merchant: "Airtel", amount: 399, date: "2026-03-14", category: "Bills", icon: "📱" },
-];
-
-/* ── Spending by category (used by Dashboard chart) ── */
-export const spendingByCategory = {
-  Food: 1600,
-  Shopping: 3499,
-  Bills: 1649,
-  Travel: 320,
-  Entertainment: 649,
-};
+/* ── Spending by category (computed dynamically now) ── */
+function computeSpending(transactions) {
+  const spending = {};
+  transactions
+    .filter((t) => t.type === "debit")
+    .forEach((t) => {
+      const cat = t.category || "Other";
+      if (cat !== "UPI") {
+        spending[cat] = (spending[cat] || 0) + Number(t.amount);
+      }
+    });
+  return spending;
+}
 
 export function BankProvider({ children }) {
+  const { user } = useAuth();
+
   const [balance, setBalance] = useState(124500);
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [transactions, setTransactions] = useState([]);
+  const [rewardPoints, setRewardPoints] = useState(4820);
+  const [cibilScore, setCibilScore] = useState(762);
+  const [spendingByCategory, setSpendingByCategory] = useState({});
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const [cibilScore] = useState(762);
-  const [rewardPoints] = useState(4820);
-
-  // Initialize: Load secure bank data asynchronously
+  /* ── Load data from Supabase when user is available ── */
   useEffect(() => {
-    async function loadData() {
-      const b = await secureStorage.getItem(BAL_KEY);
-      const t = await secureStorage.getItem(TXN_KEY);
-      if (b !== null) setBalance(b);
-      if (t !== null) setTransactions(t);
+    if (!user?.id) {
       setIsLoaded(true);
-    }
-    loadData();
-  }, []);
-
-  // Sync state to secure AES-256-GCM storage
-  useEffect(() => {
-    if (!isLoaded) return;
-    secureStorage.setItem(BAL_KEY, balance);
-    secureStorage.setItem(TXN_KEY, transactions);
-  }, [balance, transactions, isLoaded]);
-
-  // INNOVATION: AI Risk Scoring (Heuristic)
-  const calculateRisk = useCallback((amount, upiId) => {
-    let score = 0;
-    // Condition 1: High value transfer (> ₹50,000)
-    if (amount > 50000) score += 60;
-    // Condition 2: Frequent large transfer (mocked heuristic)
-    if (transactions.filter(t => t.amount > 10000).length > 5) score += 20;
-    // Condition 3: "External" unknown destinations (mocked)
-    if (!upiId.endsWith("@okicici") && !upiId.endsWith("@oksbi")) score += 20;
-    return score;
-  }, [transactions]);
-
-  /** UPI payment: deduct balance, prepend new transaction */
-  const sendMoney = useCallback(({ upiId, amount, note }) => {
-    const num = Number(amount);
-
-    // INNOVATION: Automated Trigger based on Risk Score
-    const risk = calculateRisk(num, upiId);
-    if (risk >= 80) {
-      throw new Error(`Critical Risk Detected! Score: ${risk}/100. For your protection, this high-risk transaction requires Video Selfie Verification.`);
+      return;
     }
 
-    setBalance((prev) => +(prev - num).toFixed(2));
-    setTransactions((prev) => [
-      {
-        id: Date.now(),
+    async function loadBankData() {
+      try {
+        // Load account balance
+        const account = await getAccount(user.id);
+        if (account) {
+          setBalance(Number(account.balance));
+        }
+
+        // Load transactions
+        const txns = await getTransactions(user.id);
+        if (txns) {
+          // Map Supabase records to our frontend format
+          const mapped = txns.map((t) => ({
+            id: t.id,
+            type: t.type,
+            title: t.title,
+            merchant: t.merchant || "",
+            amount: Number(t.amount),
+            date: t.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+            category: t.category || "UPI",
+            icon: t.icon || "📲",
+            risk: t.risk_score || 0,
+            note: t.note || "",
+          }));
+          setTransactions(mapped);
+          setSpendingByCategory(computeSpending(mapped));
+        }
+
+        // Load rewards
+        const rewards = await getRewards(user.id);
+        if (rewards) {
+          setRewardPoints(rewards.total_points);
+        }
+
+        // CIBIL score from profile
+        if (user.cibilScore) {
+          setCibilScore(user.cibilScore);
+        }
+      } catch (err) {
+        console.error("Failed to load bank data:", err);
+      } finally {
+        setIsLoaded(true);
+      }
+    }
+
+    loadBankData();
+  }, [user?.id]);
+
+  /* ── AI Risk Scoring (Heuristic — stays client-side for demo) ── */
+  const calculateRisk = useCallback(
+    (amount, upiId) => {
+      let score = 0;
+      if (amount > 50000) score += 60;
+      if (transactions.filter((t) => t.amount > 10000).length > 5) score += 20;
+      if (!upiId.endsWith("@okicici") && !upiId.endsWith("@oksbi")) score += 20;
+      return score;
+    },
+    [transactions]
+  );
+
+  /**
+   * sendMoney — UPI payment: deduct balance, create transaction in Supabase.
+   */
+  const sendMoney = useCallback(
+    async ({ upiId, amount, note }) => {
+      const num = Number(amount);
+
+      // AI Risk Scoring
+      const risk = calculateRisk(num, upiId);
+      if (risk >= 80) {
+        throw new Error(
+          `Critical Risk Detected! Score: ${risk}/100. For your protection, this high-risk transaction requires Video Selfie Verification.`
+        );
+      }
+
+      if (!user?.id) throw new Error("Not authenticated");
+
+      // 1. Atomically deduct balance in Supabase
+      const newBalance = await deductBalance(user.id, num);
+      setBalance(Number(newBalance));
+
+      // 2. Create transaction record in Supabase
+      const newTxn = await createTransaction(user.id, {
         type: "debit",
         title: note || `UPI → ${upiId}`,
         merchant: upiId,
         amount: num,
-        date: new Date().toISOString().slice(0, 10),
         category: "UPI",
         icon: "📲",
-        risk: risk, // Tagged for audit
-      },
-      ...prev,
-    ]);
-  }, [calculateRisk]);
+        risk,
+        note,
+      });
+
+      // 3. Update local state
+      const mappedTxn = {
+        id: newTxn.id,
+        type: "debit",
+        title: note || `UPI → ${upiId}`,
+        merchant: upiId,
+        amount: num,
+        date: newTxn.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        category: "UPI",
+        icon: "📲",
+        risk,
+        note,
+      };
+
+      setTransactions((prev) => [mappedTxn, ...prev]);
+
+      // 4. Audit log
+      writeAuditLog(user.id, "PAYMENT_SENT", {
+        upiId,
+        amount: num,
+        risk,
+        transactionId: newTxn.id,
+      });
+    },
+    [calculateRisk, user?.id]
+  );
+
+  /**
+   * addMoney — simulate receiving an inbound deposit.
+   */
+  const addMoney = useCallback(
+    async (amount) => {
+      const num = Number(amount);
+      if (!user?.id) throw new Error("Not authenticated");
+      if (num <= 0) throw new Error("Amount must be greater than zero");
+
+      // 1. Atomically add balance in Supabase
+      const newBalance = await addMoneyDB(user.id, num);
+      setBalance(Number(newBalance));
+
+      // 2. Create transaction record in Supabase
+      const newTxn = await createTransaction(user.id, {
+        type: "credit",
+        title: "Self Deposit",
+        merchant: "External Account",
+        amount: num,
+        category: "Income",
+        icon: "💳",
+        risk_score: 0,
+        note: "Simulated generic deposit",
+      });
+
+      // 3. Update local state
+      const mappedTxn = {
+        id: newTxn.id,
+        type: "credit",
+        title: "Self Deposit",
+        merchant: "External Account",
+        amount: num,
+        date: newTxn.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        category: "Income",
+        icon: "💳",
+        risk: 0,
+        note: "Simulated deposit",
+      };
+
+      setTransactions((prev) => [mappedTxn, ...prev]);
+
+      // 4. Audit log
+      writeAuditLog(user.id, "MONEY_DEPOSITED", {
+        amount: num,
+        transactionId: newTxn.id,
+      });
+    },
+    [user?.id]
+  );
+
+  /**
+   * redeemPoints - convert rewards to balance (4 pts = ₹1)
+   */
+  const redeemPoints = useCallback(
+    async (pts) => {
+      const numPts = Number(pts);
+      if (!user?.id) throw new Error("Not authenticated");
+      if (numPts <= 0) throw new Error("Points must be greater than zero");
+      if (rewardPoints < numPts) throw new Error("Insufficient reward points");
+
+      const cashbackValue = Math.floor(numPts / 4);
+
+      // 1. Deduct points via secure RPC
+      const newRewards = await redeemRewards(user.id, numPts);
+      
+      setRewardPoints(newRewards.total_points);
+
+      // 2. Add cashback to balance
+      const newBalance = await addMoneyDB(user.id, cashbackValue);
+      setBalance(Number(newBalance));
+
+      // 3. Create transaction
+      const newTxn = await createTransaction(user.id, {
+        type: "credit",
+        title: "Cashback Redeemed",
+        merchant: "NexusBank Rewards",
+        amount: cashbackValue,
+        category: "Rewards",
+        icon: "🎁",
+        risk_score: 0,
+        note: `Redeemed ${numPts} pts`,
+      });
+
+      // 4. Update local state
+      const mappedTxn = {
+        id: newTxn.id,
+        type: "credit",
+        title: "Cashback Redeemed",
+        merchant: "NexusBank Rewards",
+        amount: cashbackValue,
+        date: newTxn.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        category: "Rewards",
+        icon: "🎁",
+        risk: 0,
+        note: `Redeemed ${numPts} pts`,
+      };
+
+      setTransactions((prev) => [mappedTxn, ...prev]);
+
+      // 4. Audit log
+      writeAuditLog(user.id, "POINTS_REDEEMED", {
+        points: numPts,
+        cashback: cashbackValue,
+      });
+
+      return cashbackValue;
+    },
+    [user?.id, rewardPoints]
+  );
 
   if (!isLoaded) return null;
 
   return (
-    <BankContext.Provider value={{ balance, transactions, cibilScore, rewardPoints, sendMoney }}>
+    <BankContext.Provider
+      value={{
+        balance,
+        transactions,
+        cibilScore,
+        rewardPoints,
+        spendingByCategory,
+        sendMoney,
+        addMoney,
+        redeemPoints,
+      }}
+    >
       {children}
     </BankContext.Provider>
   );

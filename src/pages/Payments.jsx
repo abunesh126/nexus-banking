@@ -116,8 +116,8 @@ export default function Payments() {
   const handleConfirm = async () => {
     setModalLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1200)); // Processing simulation
-      sendMoney({ upiId, amount, note });
+      await new Promise((r) => setTimeout(r, 800)); // Brief UX delay
+      await sendMoney({ upiId, amount, note });
       setToast({ type: "success", message: `₹${Number(amount).toLocaleString("en-IN")} sent to ${upiId}` });
       setUpiId(""); setAmount(""); setNote("");
     } catch (err) {

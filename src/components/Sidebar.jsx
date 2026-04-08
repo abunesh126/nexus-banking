@@ -28,8 +28,8 @@ export default function Sidebar({ onNavClick }) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login", { replace: true });
     onNavClick?.();
   };

@@ -3,10 +3,78 @@ import usePageLoad from "../hooks/usePageLoad";
 import PageSkeleton from "../components/PageSkeleton";
 import { Doughnut, Line } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler } from "chart.js";
-import { Info, CheckCircle2, AlertCircle, Clock, CreditCard, TrendingUp, Lightbulb, ShieldCheck, ChevronRight, Lock } from "lucide-react";
+import { Info, CheckCircle2, AlertCircle, Clock, CreditCard, TrendingUp, Lightbulb, ShieldCheck, ChevronRight, Lock, X, Loader2, Upload } from "lucide-react";
 import { useBank } from "../context/BankContext";
 import { useAuth } from "../context/AuthContext";
 import { hasPermission } from "../utils/security";
+
+function KYCModal({ onCancel, onSuccess }) {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const handleNext = async () => {
+    if (step < 3) {
+      setStep(s => s + 1);
+    } else {
+      setLoading(true);
+      await new Promise(r => setTimeout(r, 1500));
+      setLoading(false);
+      onSuccess();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4">
+      <div className="absolute inset-0 bg-primary/30 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full sm:max-w-md bg-bg-card border border-border-card
+           sm:rounded-2xl rounded-t-2xl p-6 shadow-xl"
+        style={{ animation: "slideUp .2s ease" }}>
+        {step < 4 && <button onClick={onCancel} className="absolute top-4 right-4 text-text-muted hover:text-text-main p-2"><X size={17} /></button>}
+        
+        <div className="text-center mb-6">
+           <div className="w-12 h-12 mx-auto bg-accent/20 rounded-full flex items-center justify-center mb-4">
+              <ShieldCheck size={24} className="text-accent" />
+           </div>
+           <h3 className="text-lg font-bold text-text-main mb-2">Identity Verification</h3>
+           <p className="text-sm text-text-muted">
+             {step === 1 && "Upload your PAN Card to verify your identity."}
+             {step === 2 && "Take a clear selfie to match against your physical ID."}
+             {step === 3 && "Reviewing your details for secure CIBIL generation."}
+           </p>
+        </div>
+
+        <div className="mb-8">
+           {step === 1 && (
+             <div className="w-full h-32 border-2 border-dashed border-border-card rounded-xl flex items-center justify-center bg-bg-page hover:bg-border-card/30 transition-colors cursor-pointer">
+                <div className="text-center">
+                  <Upload size={24} className="mx-auto text-text-muted mb-2" />
+                  <p className="text-sm text-text-muted font-medium">Click to upload PAN Card</p>
+                </div>
+             </div>
+           )}
+           {step === 2 && (
+             <div className="w-full h-48 bg-black/80 rounded-xl relative overflow-hidden flex items-center justify-center">
+                 <p className="text-white/50 text-sm">Camera Preview (Simulated)</p>
+                 <div className="absolute inset-0 border-4 border-dashed border-accent/50 rounded-xl opacity-50 m-4"></div>
+             </div>
+           )}
+           {step === 3 && (
+             <div className="flex flex-col items-center justify-center py-6">
+                <Loader2 size={32} className="animate-spin text-accent mb-4" />
+                <p className="text-text-main font-semibold">Processing Data...</p>
+                <p className="text-xs text-text-muted mt-2">Checking with credit bureaus...</p>
+             </div>
+           )}
+        </div>
+        
+        <button onClick={handleNext} disabled={loading}
+          className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-60 text-white rounded-xl py-3 text-sm font-semibold transition-all min-h-[48px]">
+          {loading ? <Loader2 size={16} className="animate-spin" /> : "Continue"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Filler);
 
@@ -157,14 +225,20 @@ export default function CIBIL() {
   const loaded = usePageLoad();
   const [showTip, setShowTip] = useState(false);
   const pct = Math.round(((score - SCORE_MIN) / SCORE_RANGE) * 100);
+  const [showKyc, setShowKyc] = useState(false);
+  const [kycCompleted, setKycCompleted] = useState(false);
 
   if (!loaded) return <PageSkeleton rows={3} />;
 
   // Implementation of Access Control (RBAC)
-  // Only users with 'verified' role or higher can access detailed CIBIL analysis
-  if (!hasPermission(user, "verified")) {
+  // Users need at least 'customer' role to view their own CIBIL data
+  if (!hasPermission(user, "customer") && !kycCompleted) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center page-enter max-w-md mx-auto">
+        {showKyc && <KYCModal onCancel={() => setShowKyc(false)} onSuccess={() => {
+           setShowKyc(false);
+           setKycCompleted(true);
+        }} />}
         <div className="w-16 h-16 rounded-2xl bg-danger/10 flex items-center justify-center mb-6">
           <Lock size={32} className="text-danger" />
         </div>
@@ -174,7 +248,7 @@ export default function CIBIL() {
           To protect your data, this section is only available to <strong>Verified Users</strong>.
         </p>
         <button
-          onClick={() => alert("Identity Verification (KYC) simulation would start here.")}
+          onClick={() => setShowKyc(true)}
           className="w-full bg-accent hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
         >
           <ShieldCheck size={18} /> Verify Your Identity

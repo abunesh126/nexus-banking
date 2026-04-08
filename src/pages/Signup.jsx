@@ -51,6 +51,7 @@ export default function Signup() {
   const [showPwd,    setShowPwd]    = useState(false);
   const [showConf,   setShowConf]   = useState(false);
   const [errors,     setErrors]     = useState({});
+  const [generalErr, setGeneralErr] = useState("");
   const [loading,    setLoading]    = useState(false);
   const [success,    setSuccess]    = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -61,13 +62,24 @@ export default function Signup() {
     const errs = validate(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
+    setGeneralErr("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    signup({ fullName: form.fullName, email: form.email, phone: form.phone });
-    setLoading(false);
-    setSuccess(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    navigate("/dashboard", { replace: true });
+
+    try {
+      await signup({
+        fullName: form.fullName,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+      });
+      setLoading(false);
+      setSuccess(true);
+      await new Promise((r) => setTimeout(r, 1200));
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setLoading(false);
+      setGeneralErr(err.message || "Failed to create account. Please try again.");
+    }
   };
 
   return (
@@ -86,6 +98,13 @@ export default function Signup() {
         <div className="bg-bg-card border border-border-card rounded-2xl p-5 sm:p-7 shadow-sm">
           <h1 className="text-xl font-bold text-text-main mb-1">Create your account</h1>
           <p className="text-text-muted text-sm mb-5">Free forever · No hidden charges</p>
+
+          {generalErr && (
+            <div className="mb-5 p-4 rounded-xl bg-danger/10 border border-danger/20 flex items-start gap-3">
+              <AlertCircle size={16} className="text-danger mt-0.5 flex-shrink-0" />
+              <p className="text-xs font-semibold text-danger leading-relaxed">{generalErr}</p>
+            </div>
+          )}
 
           {success ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">

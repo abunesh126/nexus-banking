@@ -32,14 +32,13 @@ function validate(email, password) {
 }
 
 export default function Login() {
-  const { login, verifyMFA, mfaRequired } = useAuth();
+  const { login, resetPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mfaCode, setMfaCode] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [errors, setErrors] = useState({});
@@ -48,10 +47,6 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (mfaRequired) {
-      handleMfaSubmit();
-      return;
-    }
 
     const errs = validate(email, password);
     if (Object.keys(errs).length) { setErrors(errs); return; }
@@ -61,10 +56,8 @@ export default function Login() {
 
     try {
       await new Promise((r) => setTimeout(r, 700));
-      const res = await login({ email, password, rememberMe });
-      if (!res?.mfaRequired) {
-        navigate(from, { replace: true });
-      }
+      await login({ email, password, rememberMe });
+      navigate(from, { replace: true });
     } catch (err) {
       setGeneralErr(err.message);
     } finally {
@@ -72,15 +65,15 @@ export default function Login() {
     }
   };
 
-  const handleMfaSubmit = async () => {
-    if (mfaCode.length !== 6) {
-      setErrors({ mfa: "Please enter the 6-digit code." });
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setErrors({ email: "Enter your email first to reset password." });
       return;
     }
     setLoading(true);
     try {
-      await verifyMFA(mfaCode);
-      navigate(from, { replace: true });
+      await resetPassword(email);
+      alert("Password reset email sent (check your spam folder).");
     } catch (err) {
       setGeneralErr(err.message);
     } finally {
@@ -105,10 +98,10 @@ export default function Login() {
         {/* Card */}
         <div className="bg-bg-card border border-border-card rounded-2xl p-5 sm:p-7 shadow-sm">
           <h1 className="text-xl font-bold text-text-main mb-1">
-            {mfaRequired ? "Two-Factor Auth" : "Welcome back"}
+            Welcome back
           </h1>
           <p className="text-text-muted text-sm mb-5">
-            {mfaRequired ? "Enter the 6-digit code from your authenticator app." : "Sign in to your account"}
+            Sign in to your account
           </p>
 
           {generalErr && (
@@ -119,8 +112,6 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {!mfaRequired ? (
-              <>
                 <Field label="Email address" error={errors.email}>
                   <div className="relative">
                     <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
@@ -154,35 +145,20 @@ export default function Login() {
                       className="w-4 h-4 rounded border-border-card accent-accent" />
                     <span className="text-sm text-text-main">Remember me</span>
                   </label>
-                  <button type="button"
+                  <button type="button" onClick={handleForgotPassword}
                     className="text-sm text-accent hover:text-accent-hover font-medium transition-colors min-h-[44px] px-1">
                     Forgot password?
                   </button>
                 </div>
-              </>
-            ) : (
-              <Field label="Authentication Code" error={errors.mfa}>
-                <div className="relative">
-                  <ShieldCheck size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                  <input id="mfa-code" type="text" value={mfaCode}
-                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className={`${inputCls(!!errors.mfa)} pl-10 text-center tracking-[0.5em] font-bold text-lg`}
-                    placeholder="000000" inputMode="numeric" />
-                </div>
-              </Field>
-            )}
 
             <button id="login-submit" type="submit" disabled={loading}
               className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover
                 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold
                 rounded-xl py-3 transition-all duration-150 shadow-sm min-h-[48px] text-sm">
-              {loading ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : (mfaRequired ? "Verify & Sign In" : "Sign In")}
+              {loading ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : "Sign In"}
             </button>
           </form>
-
-          {!mfaRequired && (
-            <>
-              <div className="flex items-center gap-3 my-5">
+               <div className="flex items-center gap-3 my-5">
                 <div className="flex-1 h-px bg-border-card" />
                 <span className="text-xs text-text-muted whitespace-nowrap">Don't have an account?</span>
                 <div className="flex-1 h-px bg-border-card" />
@@ -193,8 +169,6 @@ export default function Login() {
                   hover:bg-bg-page text-text-main text-sm font-medium rounded-xl py-3 transition-all duration-150 min-h-[48px] flex items-center justify-center">
                 Create an account
               </Link>
-            </>
-          )}
         </div>
 
         <p className="mt-5 text-center text-xs text-text-muted px-4">
