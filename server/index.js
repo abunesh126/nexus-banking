@@ -12,6 +12,7 @@ const healthRoutes = require('./routes/health');
 const cryptoRoutes = require('./routes/crypto');
 const cardRoutes = require('./routes/cards');
 const authRoutes = require('./routes/auth');
+const auditRoutes = require('./routes/audit');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/crypto', cryptoRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/audit', auditRoutes);
 
 // 6. Global 404 Handler
 app.use((req, res) => {

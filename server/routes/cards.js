@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../lib/supabaseAdmin');
 const vaultService = require('../services/crypto/vaultService');
+const auditService = require('../services/auditService');
 const authMiddleware = require('../middleware/authMiddleware');
 const storeService = require('../services/storeService');
 const logger = require('../utils/logger');
@@ -82,11 +83,16 @@ router.get('/:id/reveal', authMiddleware, async (req, res) => {
     // 5. DECRYPTION (AAD Bound)
     const revealed = await vaultService.revealCardData(req.user.id, card);
 
-    // 6. FORENSIC AUDIT (Sanitized Logging)
+    // 6. FORENSIC AUDIT (Sanitized Logging & Hash-Chaining)
     await logSecurityEvent(req.user.id, 'CARD_REVEAL', 'HIGH', { 
       card_id: cardId,
       last_four: card.last_four
     });
+
+    await auditService.appendLog(req.user.id, 'CARD_REVEAL', {
+      card_id: cardId,
+      last_four: card.last_four
+    }, req.headers['user-agent'], req.ip);
 
     // 7. EPHEMERAL HARDENING: Cache Control
     res.set({
@@ -116,6 +122,14 @@ router.post('/', authMiddleware, async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Log the creation to the Forensic Audit Chain
+    await auditService.appendLog(req.user.id, 'CARD_CREATE', {
+      card_id: data.id,
+      card_type: data.card_type,
+      label: data.label
+    }, req.headers['user-agent'], req.ip);
+
     res.status(201).json(vaultService.maskCardData(data));
   } catch (err) {
     logger.error('API Card Creation Error', { error: err.message });
