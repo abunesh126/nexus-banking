@@ -75,8 +75,12 @@ class AlertService {
   }
 
   alertAdmin(event) {
-    // Mock for Email/SMS/Dashboard broadcast
-    console.log(`\n[ADMIN_ALERT] ${event.severity} - ${event.type}\nPayload: ${JSON.stringify(event.metadata)}\n`);
+    // Standardize Admin Broadcast for Security Operations Center
+    logger.warn('ADMIN_NOTIFICATION_EMITTED', {
+      severity: event.severity,
+      type: event.type,
+      metadata: event.metadata
+    });
   }
 }
 
