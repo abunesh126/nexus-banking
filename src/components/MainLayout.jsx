@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { Outlet, useLocation, NavLink } from "react-router-dom";
 import {
-  LayoutDashboard, Send, PieChart, Award, BookOpen,
+  LayoutDashboard, Send, PieChart, Award, BookOpen, ShieldAlert, Zap
 } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Navbar  from "./Navbar";
@@ -60,9 +61,55 @@ function BottomNav() {
 
 export default function MainLayout() {
   const { pathname } = useLocation();
+  const [isSafeMode, setIsSafeMode] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+
+  useEffect(() => {
+    const handleSafeMode = (e) => setIsSafeMode(e.detail.active);
+    const handleRateLimit = (e) => {
+      setIsRateLimited(true);
+      setTimeout(() => setIsRateLimited(false), 5000); // Auto-hide after 5s
+    };
+
+    window.addEventListener('NEXUS_SAFE_MODE', handleSafeMode);
+    window.addEventListener('NEXUS_RATE_LIMIT', handleRateLimit);
+    
+    return () => {
+      window.removeEventListener('NEXUS_SAFE_MODE', handleSafeMode);
+      window.removeEventListener('NEXUS_RATE_LIMIT', handleRateLimit);
+    };
+  }, []);
 
   return (
-    <div className="flex h-screen bg-bg-page overflow-hidden">
+    <div className="flex h-screen bg-bg-page overflow-hidden relative">
+      
+      {/* 🛑 GLOBAL SAFE MODE OVERLAY */}
+      {isSafeMode && (
+        <div className="absolute inset-0 z-[100] bg-bg-page flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+          <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 mb-6 animate-pulse border border-red-500/30">
+            <ShieldAlert size={48} />
+          </div>
+          <h1 className="text-3xl font-black text-text-main mb-2 tracking-tight">SYSTEM LOCKED</h1>
+          <p className="text-text-muted max-w-md mb-8">
+            The NexusBank Security Brain has detected a Ledger Integrity Failure. 
+            All financial operations are halted for forensic audit.
+          </p>
+          <div className="px-6 py-2 bg-text-main text-bg-page rounded-xl font-bold uppercase tracking-widest text-xs">
+            Emergency Mode Active
+          </div>
+        </div>
+      )}
+
+      {/* ⚠️ RATE LIMIT WARNING */}
+      {isRateLimited && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[110] px-4 py-3 bg-accent text-white rounded-xl shadow-2xl flex items-center gap-3 animate-bounce-in border-4 border-white/20">
+          <Zap size={20} fill="white" />
+          <div>
+            <p className="text-sm font-bold">RATE LIMIT EXCEEDED</p>
+            <p className="text-[10px] opacity-90">Slow down and try again in 5 seconds.</p>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar — desktop only */}
       <div className="hidden md:flex md:flex-shrink-0">
@@ -73,7 +120,7 @@ export default function MainLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Navbar onMenuClick={() => {}} />
 
-        {/* Page content — keyed so it remounts on route change */}
+        {/* Page content */}
         <main
           key={pathname}
           className="flex-1 overflow-y-auto overflow-x-hidden bg-bg-page"

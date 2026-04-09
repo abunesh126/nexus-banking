@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { Bell, Landmark } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import SecurityIndicator from "./SecurityIndicator";
 
 const PAGE_TITLES = {
   "/dashboard": "Dashboard",
@@ -37,6 +38,10 @@ export default function Navbar({ onMenuClick }) {
             })}
           </p>
         </div>
+      </div>
+
+      <div className="hidden lg:flex flex-1 justify-center">
+        <SecurityIndicator />
       </div>
 
       {/* Right: bell + user */}

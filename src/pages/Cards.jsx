@@ -16,12 +16,13 @@ export default function Cards() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [mfaModal, setMfaModal] = useState({ isOpen: false, targetId: null });
 
-    // Load cards from Supabase on mount
+    // Load cards from Proxy on mount
     useEffect(() => {
         if (!user?.id) return;
         async function loadCards() {
             try {
-                const data = await getCards(user.id);
+                // PROXIED: userId is inferred from token
+                const data = await getCards();
                 if (data) {
                     setCards(data.map((c) => ({
                         id: c.id,
@@ -34,7 +35,7 @@ export default function Cards() {
                     })));
                 }
             } catch (err) {
-                console.error("Failed to load cards:", err);
+                console.error("Failed to load cards via proxy:", err);
             } finally {
                 setIsLoading(false);
             }
@@ -52,6 +53,7 @@ export default function Cards() {
             setRevealedIds(revealedIds.filter(rid => rid !== id));
         } else {
             try {
+                // PROXIED: revealCard uses the hardened backend reveal route
                 const fullData = await revealCard(id, revealToken);
                 setCards(cards.map(c => c.id === id ? {
                     ...c,
@@ -85,13 +87,14 @@ export default function Cards() {
         };
 
         try {
-            const saved = await createCard(user.id, newCardData);
+            // PROXIED: creation is sealed on the server
+            const saved = await createCard(newCardData);
             setCards([{
                 id: saved.id,
                 ...newCardData,
             }, ...cards]);
         } catch (err) {
-            console.error("Failed to create card:", err);
+            console.error("Failed to create card via proxy:", err);
             alert("Failed to generate card. Please try again.");
         } finally {
             setIsGenerating(false);
@@ -101,10 +104,11 @@ export default function Cards() {
     const handleDeleteCard = async (id) => {
         if (!user?.id) return;
         try {
-            await deleteCardDB(id, user.id);
+            // PROXIED: deleteCard consumes the burner card server-side
+            await deleteCardDB(id);
             setCards(cards.filter(c => c.id !== id));
         } catch (err) {
-            console.error("Failed to delete card:", err);
+            console.error("Failed to delete card via proxy:", err);
         }
     };
 

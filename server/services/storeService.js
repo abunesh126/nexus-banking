@@ -68,6 +68,25 @@ class StoreService {
   resetMfaAttempts(userId) {
     this.attemptCache.del(`mfa_attempts:${userId}`);
   }
+
+  // --- TRANSACTION INTEGRITY ---
+
+  validateTransactionRate(userId) {
+    const key = `txn_rate:${userId}`;
+    const current = this.tokenCache.get(key) || 0;
+    if (current >= 5) return false;
+    
+    this.tokenCache.set(key, current + 1, 60); // 60s window
+    return true;
+  }
+
+  saveIdempotency(key, result) {
+    this.tokenCache.set(`idem:${key}`, result, 86400); // 24hr cache
+  }
+
+  getIdempotency(key) {
+    return this.tokenCache.get(`idem:${key}`);
+  }
 }
 
 module.exports = new StoreService();

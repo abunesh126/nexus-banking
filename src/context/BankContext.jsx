@@ -1,21 +1,17 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { supabase } from "../lib/supabase";
 import {
   getAccount,
   getTransactions,
-  createTransaction,
-  deductBalance,
-  addMoney as addMoneyDB,
   getRewards,
-  updateRewards,
   redeemRewards,
   writeAuditLog,
+  processTransfer
 } from "../lib/database";
 
 const BankContext = createContext(null);
 
-/* ── Spending by category (computed dynamically now) ── */
+/* ── Spending by category ── */
 function computeSpending(transactions) {
   const spending = {};
   transactions
@@ -32,248 +28,130 @@ function computeSpending(transactions) {
 export function BankProvider({ children }) {
   const { user } = useAuth();
 
-  const [balance, setBalance] = useState(124500);
+  const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
-  const [rewardPoints, setRewardPoints] = useState(4820);
+  const [rewardPoints, setRewardPoints] = useState(0);
   const [cibilScore, setCibilScore] = useState(762);
   const [spendingByCategory, setSpendingByCategory] = useState({});
   const [isLoaded, setIsLoaded] = useState(false);
+  const [systemState, setSystemState] = useState({ status: 'SAFE', reason: null });
 
-  /* ── Load data from Supabase when user is available ── */
-  useEffect(() => {
-    if (!user?.id) {
-      setIsLoaded(true);
-      return;
-    }
+  /* ── Load data via Proxied Service Layer ── */
+  const loadBankData = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // All these calls are now proxied via Node.js Security Brain
+      const [account, txns, rewards] = await Promise.all([
+        getAccount(),
+        getTransactions(),
+        getRewards()
+      ]);
 
-    async function loadBankData() {
-      try {
-        // Load account balance
-        const account = await getAccount(user.id);
-        if (account) {
-          setBalance(Number(account.balance));
-        }
-
-        // Load transactions
-        const txns = await getTransactions(user.id);
-        if (txns) {
-          // Map Supabase records to our frontend format
-          const mapped = txns.map((t) => ({
-            id: t.id,
-            type: t.type,
-            title: t.title,
-            merchant: t.merchant || "",
-            amount: Number(t.amount),
-            date: t.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-            category: t.category || "UPI",
-            icon: t.icon || "📲",
-            risk: t.risk_score || 0,
-            note: t.note || "",
-          }));
-          setTransactions(mapped);
-          setSpendingByCategory(computeSpending(mapped));
-        }
-
-        // Load rewards
-        const rewards = await getRewards(user.id);
-        if (rewards) {
-          setRewardPoints(rewards.total_points);
-        }
-
-        // CIBIL score from profile
-        if (user.cibilScore) {
-          setCibilScore(user.cibilScore);
-        }
-      } catch (err) {
-        console.error("Failed to load bank data:", err);
-      } finally {
-        setIsLoaded(true);
+      if (account) setBalance(Number(account.balance));
+      
+      if (txns) {
+        const mapped = txns.map((t) => ({
+          id: t.id,
+          type: t.type,
+          title: t.title,
+          merchant: t.merchant || "",
+          amount: Number(t.amount),
+          date: t.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+          category: t.category || "UPI",
+          icon: t.icon || "📲",
+          risk: t.risk_score || 0,
+          note: t.note || "",
+        }));
+        setTransactions(mapped);
+        setSpendingByCategory(computeSpending(mapped));
       }
-    }
 
-    loadBankData();
+      if (rewards) setRewardPoints(rewards.points || rewards.total_points || 0);
+      
+      if (user.cibilScore) setCibilScore(user.cibilScore);
+
+    } catch (err) {
+      console.error("Failed to load proxied bank data", err);
+      if (err.message === 'SYSTEM_LOCKED') {
+        setSystemState({ status: 'LOCKED', reason: 'Forensic Integrity Breach' });
+      }
+    } finally {
+      setIsLoaded(true);
+    }
   }, [user?.id]);
 
-  /* ── AI Risk Scoring (Heuristic — stays client-side for demo) ── */
-  const calculateRisk = useCallback(
-    (amount, upiId) => {
-      let score = 0;
-      if (amount > 50000) score += 60;
-      if (transactions.filter((t) => t.amount > 10000).length > 5) score += 20;
-      if (!upiId.endsWith("@okicici") && !upiId.endsWith("@oksbi")) score += 20;
-      return score;
-    },
-    [transactions]
-  );
+  useEffect(() => {
+    if (user?.id) loadBankData();
+    else setIsLoaded(true);
+  }, [user?.id, loadBankData]);
 
   /**
-   * sendMoney — UPI payment: deduct balance, create transaction in Supabase.
+   * sendMoney — Now uses the hardened /transfer proxy
    */
   const sendMoney = useCallback(
     async ({ upiId, amount, note }) => {
-      const num = Number(amount);
+      if (!user?.id) throw new Error("Authentication Required");
 
-      // AI Risk Scoring
-      const risk = calculateRisk(num, upiId);
-      if (risk >= 80) {
-        throw new Error(
-          `Critical Risk Detected! Score: ${risk}/100. For your protection, this high-risk transaction requires Video Selfie Verification.`
-        );
+      try {
+        // PROXIED: The backend handles atomic balance shifts, HMAC chaining, 
+        // and forensic logging in a single unit of work.
+        const result = await processTransfer({
+          to_upi: upiId,
+          amount: Number(amount),
+          note: note || "UPI Transfer"
+        });
+
+        // Update local state from response
+        setBalance(Number(result.new_balance));
+        await loadBankData(); // Refresh history
+        
+        return result;
+      } catch (err) {
+        console.error("Transfer failed", err);
+        throw err;
       }
-
-      if (!user?.id) throw new Error("Not authenticated");
-
-      // 1. Atomically deduct balance in Supabase
-      const newBalance = await deductBalance(user.id, num);
-      setBalance(Number(newBalance));
-
-      // 2. Create transaction record in Supabase
-      const newTxn = await createTransaction(user.id, {
-        type: "debit",
-        title: note || `UPI → ${upiId}`,
-        merchant: upiId,
-        amount: num,
-        category: "UPI",
-        icon: "📲",
-        risk,
-        note,
-      });
-
-      // 3. Update local state
-      const mappedTxn = {
-        id: newTxn.id,
-        type: "debit",
-        title: note || `UPI → ${upiId}`,
-        merchant: upiId,
-        amount: num,
-        date: newTxn.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-        category: "UPI",
-        icon: "📲",
-        risk,
-        note,
-      };
-
-      setTransactions((prev) => [mappedTxn, ...prev]);
-
-      // 4. Audit log
-      writeAuditLog(user.id, "PAYMENT_SENT", {
-        upiId,
-        amount: num,
-        risk,
-        transactionId: newTxn.id,
-      });
     },
-    [calculateRisk, user?.id]
+    [user?.id, loadBankData]
   );
 
   /**
-   * addMoney — simulate receiving an inbound deposit.
+   * addMoney — receiving an inbound deposit (Simulated)
    */
   const addMoney = useCallback(
     async (amount) => {
-      const num = Number(amount);
-      if (!user?.id) throw new Error("Not authenticated");
-      if (num <= 0) throw new Error("Amount must be greater than zero");
-
-      // 1. Atomically add balance in Supabase
-      const newBalance = await addMoneyDB(user.id, num);
-      setBalance(Number(newBalance));
-
-      // 2. Create transaction record in Supabase
-      const newTxn = await createTransaction(user.id, {
-        type: "credit",
-        title: "Self Deposit",
-        merchant: "External Account",
-        amount: num,
-        category: "Income",
-        icon: "💳",
-        risk_score: 0,
-        note: "Simulated generic deposit",
-      });
-
-      // 3. Update local state
-      const mappedTxn = {
-        id: newTxn.id,
-        type: "credit",
-        title: "Self Deposit",
-        merchant: "External Account",
-        amount: num,
-        date: newTxn.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-        category: "Income",
-        icon: "💳",
-        risk: 0,
-        note: "Simulated deposit",
-      };
-
-      setTransactions((prev) => [mappedTxn, ...prev]);
-
-      // 4. Audit log
-      writeAuditLog(user.id, "MONEY_DEPOSITED", {
-        amount: num,
-        transactionId: newTxn.id,
-      });
+      // In Phase 8, even "Add Money" must be a controlled backend operation
+      try {
+        const result = await processTransfer({
+          to_upi: 'SELF',
+          amount: Number(amount),
+          type: 'deposit'
+        });
+        setBalance(Number(result.new_balance));
+        await loadBankData();
+      } catch (err) {
+        throw err;
+      }
     },
-    [user?.id]
+    [loadBankData]
   );
 
   /**
-   * redeemPoints - convert rewards to balance (4 pts = ₹1)
+   * redeemPoints - convert rewards to balance (Proxied)
    */
   const redeemPoints = useCallback(
     async (pts) => {
-      const numPts = Number(pts);
-      if (!user?.id) throw new Error("Not authenticated");
-      if (numPts <= 0) throw new Error("Points must be greater than zero");
-      if (rewardPoints < numPts) throw new Error("Insufficient reward points");
-
-      const cashbackValue = Math.floor(numPts / 4);
-
-      // 1. Deduct points via secure RPC
-      const newRewards = await redeemRewards(user.id, numPts);
-      
-      setRewardPoints(newRewards.total_points);
-
-      // 2. Add cashback to balance
-      const newBalance = await addMoneyDB(user.id, cashbackValue);
-      setBalance(Number(newBalance));
-
-      // 3. Create transaction
-      const newTxn = await createTransaction(user.id, {
-        type: "credit",
-        title: "Cashback Redeemed",
-        merchant: "NexusBank Rewards",
-        amount: cashbackValue,
-        category: "Rewards",
-        icon: "🎁",
-        risk_score: 0,
-        note: `Redeemed ${numPts} pts`,
-      });
-
-      // 4. Update local state
-      const mappedTxn = {
-        id: newTxn.id,
-        type: "credit",
-        title: "Cashback Redeemed",
-        merchant: "NexusBank Rewards",
-        amount: cashbackValue,
-        date: newTxn.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-        category: "Rewards",
-        icon: "🎁",
-        risk: 0,
-        note: `Redeemed ${numPts} pts`,
-      };
-
-      setTransactions((prev) => [mappedTxn, ...prev]);
-
-      // 4. Audit log
-      writeAuditLog(user.id, "POINTS_REDEEMED", {
-        points: numPts,
-        cashback: cashbackValue,
-      });
-
-      return cashbackValue;
+      try {
+        const result = await redeemRewards(Number(pts));
+        setRewardPoints(result.new_points);
+        setBalance(Number(result.new_balance));
+        await loadBankData();
+        return result.cashback;
+      } catch (err) {
+        throw err;
+      }
     },
-    [user?.id, rewardPoints]
+    [loadBankData]
   );
 
   if (!isLoaded) return null;
@@ -286,9 +164,11 @@ export function BankProvider({ children }) {
         cibilScore,
         rewardPoints,
         spendingByCategory,
+        systemState,
         sendMoney,
         addMoney,
         redeemPoints,
+        refreshData: loadBankData
       }}
     >
       {children}
@@ -296,6 +176,4 @@ export function BankProvider({ children }) {
   );
 }
 
-export function useBank() {
-  return useContext(BankContext);
-}
+export const useBank = () => useContext(BankContext);

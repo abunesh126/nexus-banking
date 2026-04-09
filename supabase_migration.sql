@@ -156,14 +156,83 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   icon TEXT DEFAULT '📲',
   risk_score INTEGER DEFAULT 0,
   note TEXT,
+  
+  -- Phase 6/7: Financial Anomaly Detection & Alerts
+  status TEXT DEFAULT 'INITIATED' CHECK (status IN ('INITIATED', 'VERIFIED', 'PENDING', 'EXECUTED', 'FAILED', 'LOGGED')),
+  idempotency_key UUID UNIQUE,
+  currency TEXT DEFAULT 'INR',
+  integrity_hash TEXT,             -- SHA-256 HMAC of full context
+  receipt_signature TEXT,          -- Non-repudiation proof
+  nonce UUID,                      -- Single-use replay protection
+  balance_hash TEXT,               -- HMAC-SHA256(balanceBefore:balanceAfter:txId)
+  previous_hash TEXT,              -- Link to last transaction's chain_hash
+  chain_hash TEXT,                 -- HMAC-SHA256(currentData : previousHash)
+  
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Phase 7.5: System Control & Root of Trust
+CREATE TABLE IF NOT EXISTS public.system_state_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  state TEXT CHECK (state IN ('HEALTHY', 'LOCKED', 'RECOVERY', 'UNLOCKED')),
+  trigger_reason TEXT,
+  severity TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS private.system_config (
+  key TEXT PRIMARY KEY,
+  value JSONB,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Initialize Root of Trust (Genesis)
+INSERT INTO private.system_config (key, value)
+VALUES 
+  ('expected_total_balance', '{"amount": 124500.00, "last_tx": null}'),
+  ('genesis_hash', '{"hash": "NEXUS_ROOT_GENESIS_2026_HMAC_SEED"}'),
+  ('system_lock', '{"active": false}')
+ON CONFLICT (key) DO NOTHING;
+
 CREATE INDEX idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX idx_transactions_created_at ON public.transactions(created_at DESC);
+CREATE INDEX idx_transactions_idempotency ON public.transactions(idempotency_key);
 
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.transactions FROM PUBLIC;
+
+-- Atomic Balance Shift (Defense-in-Depth)
+CREATE OR REPLACE FUNCTION private.process_secure_transfer(
+  from_user_id UUID,
+  to_user_id UUID,
+  transfer_amount DECIMAL(15, 2),
+  txn_idempotency_key UUID
+)
+RETURNS JSONB AS $$
+DECLARE
+  sender_balance DECIMAL;
+  receiver_balance DECIMAL;
+BEGIN
+  -- 1. Atomic Locked Balance Check (Select for Update)
+  SELECT balance INTO sender_balance FROM public.accounts 
+  WHERE user_id = from_user_id FOR UPDATE;
+  
+  IF sender_balance < transfer_amount THEN
+    RAISE EXCEPTION 'INSUFFICIENT_FUNDS';
+  END IF;
+
+  -- 2. Atomic Debit
+  UPDATE public.accounts SET balance = balance - transfer_amount 
+  WHERE user_id = from_user_id;
+
+  -- 3. Atomic Credit
+  UPDATE public.accounts SET balance = balance + transfer_amount 
+  WHERE user_id = to_user_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE POLICY "Users and privileged can view transactions"
   ON public.transactions FOR SELECT
@@ -541,5 +610,33 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ═══════════════════════════════════════════════════════════════════
--- ██  DONE! All tables, policies, triggers, and functions created.
+-- ██  Phase 8: Strategic Zero-Trust Lockdown
 -- ═══════════════════════════════════════════════════════════════════
+-- REVOKE all direct database access from client-side roles (anon & authenticated)
+-- Every operation must now be mediated by the Node.js Security Brain (service_role)
+
+DO $$ 
+BEGIN
+  -- Revoke access to all tables in the public schema
+  EXECUTE (
+    SELECT 'REVOKE ALL ON TABLE ' || quote_ident(schemaname) || '.' || quote_ident(tablename) || ' FROM anon, authenticated;'
+    FROM pg_tables
+    WHERE schemaname = 'public'
+  );
+
+  -- Revoke access to all functions in the public schema
+  EXECUTE (
+    SELECT 'REVOKE ALL ON FUNCTION ' || quote_ident(p.nspname) || '.' || quote_ident(p.proname) || '(' || pg_get_function_identity_arguments(p.oid) || ') FROM anon, authenticated;'
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public'
+  );
+END $$;
+
+-- Hard Lockdown for critical forensic tables
+REVOKE ALL ON public.security_events FROM anon, authenticated;
+REVOKE ALL ON public.audit_logs FROM anon, authenticated;
+REVOKE ALL ON private.system_config FROM anon, authenticated;
+REVOKE ALL ON public.transactions FROM anon, authenticated;
+
+-- DONE! All tables, policies, and functions locked down.

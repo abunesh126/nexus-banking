@@ -1,171 +1,59 @@
-/**
- * Database Service Layer — All Supabase CRUD operations for NexusBank.
- * This is the single source of truth for all database interactions.
- * Components should NEVER call supabase directly — always use these functions.
- */
-import { supabase } from './supabase';
+import { apiClient } from './apiClient';
 
 /* ═══════════════════════════════════════════════════════════════════
    ██  PROFILES
    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Get the current user's profile.
- */
-export async function getProfile(userId) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function getProfile() {
+  return apiClient.get('/auth/profile');
 }
 
-/**
- * Update the current user's profile.
- */
-export async function updateProfile(userId, updates) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', userId)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function updateProfile(updates) {
+  return apiClient.put('/auth/profile', updates);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   ██  ACCOUNTS (Balance)
+   ██  ACCOUNTS (Internal Proxy Only)
    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Get the current user's bank account (balance).
- */
-export async function getAccount(userId) {
-  const { data, error } = await supabase
-    .from('accounts')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function getAccount() {
+  return apiClient.get('/transactions/account');
 }
 
-/**
- * Update account balance.
- * Uses an RPC function to ensure atomic balance updates (no race conditions).
- */
-export async function updateBalance(userId, newBalance) {
-  const { data, error } = await supabase
-    .from('accounts')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-/**
- * Deduct balance atomically using an RPC call.
- */
-export async function deductBalance(userId, amount) {
-  const { data, error } = await supabase.rpc('deduct_balance', {
-    p_user_id: userId,
-    p_amount: amount,
-  });
-
-  if (error) throw error;
-  return data;
-}
-
-/**
- * Add balance atomically using an RPC call.
- */
-export async function addMoney(userId, amount) {
-  const { data, error } = await supabase.rpc('add_money', {
-    p_user_id: userId,
-    p_amount: amount,
-  });
-
-  if (error) throw error;
-  return data;
-}
+// NOTE: updateBalance, deductBalance, and addMoney are NO LONGER 
+// available from frontend for security. Handled internally by /transfer.
 
 /* ═══════════════════════════════════════════════════════════════════
    ██  TRANSACTIONS
    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Get all transactions for a user, ordered by date descending.
- */
-export async function getTransactions(userId) {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data;
+export async function getTransactions() {
+  return apiClient.get('/transactions');
 }
 
 /**
- * Create a new transaction record.
+ * Modern Secure Transfer (Phase 6/7/8 Flow)
  */
-export async function createTransaction(userId, transaction) {
-  const { data, error } = await supabase.rpc('log_transaction', {
-    p_user_id: userId,
-    p_type: transaction.type,
-    p_title: transaction.title,
-    p_merchant: transaction.merchant || '',
-    p_amount: transaction.amount,
-    p_category: transaction.category || 'UPI',
-    p_icon: transaction.icon || '📲',
-    p_risk_score: transaction.risk_score ?? transaction.risk ?? 0,
-    p_note: transaction.note || ''
-  });
-
-  if (error) throw error;
-  return data;
+export async function processTransfer(payload) {
+  return apiClient.post('/transactions/transfer', payload);
 }
-
-import { apiClient } from './apiClient';
 
 /* ═══════════════════════════════════════════════════════════════════
-   ██  VIRTUAL CARDS (Zero-Trust API Migration)
+   ██  VIRTUAL CARDS
    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Get all virtual cards for a user (Masked via Backend).
- */
-export async function getCards(userId) {
+export async function getCards() {
   return apiClient.get('/cards');
 }
 
-/**
- * Create a new virtual card (Sealed on Server).
- */
-export async function createCard(userId, card) {
+export async function createCard(card) {
   return apiClient.post('/cards', card);
 }
 
-/**
- * Delete a virtual card (Burn it).
- */
-export async function deleteCard(cardId, userId) {
+export async function deleteCard(cardId) {
   return apiClient.delete(`/cards/${cardId}`);
 }
 
-/**
- * Reveal full decrypted card details (Zero-Trust Retrieval).
- */
 export async function revealCard(cardId, revealToken = null) {
   return apiClient.get(`/cards/${cardId}/reveal`, {
     headers: revealToken ? { 'x-reveal-token': revealToken } : {}
@@ -176,78 +64,23 @@ export async function revealCard(cardId, revealToken = null) {
    ██  REWARDS
    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Get user's reward data.
- */
-export async function getRewards(userId) {
-  const { data, error } = await supabase
-    .from('rewards')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows found
-  return data;
+export async function getRewards() {
+  return apiClient.get('/rewards');
 }
 
-/**
- * Update reward points.
- */
-export async function updateRewards(userId, updates) {
-  const { data, error } = await supabase
-    .from('rewards')
-    .update(updates)
-    .eq('user_id', userId)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-/**
- * Redeem rewards for cashback atomically.
- */
-export async function redeemRewards(userId, points) {
-  const { data, error } = await supabase.rpc('redeem_rewards', {
-    p_user_id: userId,
-    p_points_to_redeem: points
-  });
-
-  if (error) throw error;
-  return data;
+export async function redeemRewards(points) {
+  return apiClient.post('/rewards/redeem', { points });
 }
 
 /* ═══════════════════════════════════════════════════════════════════
    ██  AUDIT LOGS
    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Write a security audit log entry.
- */
-export async function writeAuditLog(userId, action, metadata = {}) {
-  const { error } = await supabase.rpc('log_audit', {
-    p_user_id: userId,
-    p_action: action,
-    p_metadata: metadata,
-    p_user_agent: navigator.userAgent
-  });
-
-  // Audit log failures should never crash the app
-  if (error) console.error('[AUDIT LOG ERROR]:', error);
+export async function writeAuditLog(action, metadata = {}) {
+  // Use backend severity engine via proxy
+  return apiClient.post('/audit/log', { action, metadata });
 }
 
-/**
- * Get audit logs for the current user (last 100).
- */
-export async function getAuditLogs(userId) {
-  const { data, error } = await supabase
-    .from('audit_logs')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  if (error) throw error;
-  return data;
+export async function getAuditLogs() {
+  return apiClient.get('/audit');
 }
