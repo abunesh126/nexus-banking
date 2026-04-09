@@ -9,6 +9,9 @@ const securityHeaders = require('./middleware/securityHeaders');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { anomalyMiddleware } = require('./middleware/anomaly');
 const healthRoutes = require('./routes/health');
+const cryptoRoutes = require('./routes/crypto');
+const cardRoutes = require('./routes/cards');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 
@@ -38,6 +41,9 @@ app.use('/api', generalLimiter);
 
 // 5. Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/crypto', cryptoRoutes);
+app.use('/api/cards', cardRoutes);
+app.use('/api/auth', authRoutes);
 
 // 6. Global 404 Handler
 app.use((req, res) => {

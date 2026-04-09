@@ -136,52 +136,38 @@ export async function createTransaction(userId, transaction) {
   return data;
 }
 
+import { apiClient } from './apiClient';
+
 /* ═══════════════════════════════════════════════════════════════════
-   ██  VIRTUAL CARDS
+   ██  VIRTUAL CARDS (Zero-Trust API Migration)
    ═══════════════════════════════════════════════════════════════════ */
 
 /**
- * Get all virtual cards for a user.
+ * Get all virtual cards for a user (Masked via Backend).
  */
 export async function getCards(userId) {
-  const { data, error } = await supabase
-    .from('virtual_cards')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data;
+  return apiClient.get('/cards');
 }
 
 /**
- * Create a new virtual card (burner or primary).
+ * Create a new virtual card (Sealed on Server).
  */
 export async function createCard(userId, card) {
-  const { data, error } = await supabase.rpc('generate_card', {
-    p_user_id: userId,
-    p_card_type: card.type,
-    p_card_number: card.number,
-    p_expiry: card.expiry,
-    p_cvv: card.cvv,
-    p_label: card.label,
-    p_color: card.color
-  });
-
-  if (error) throw error;
-  return data;
+  return apiClient.post('/cards', card);
 }
 
 /**
- * Delete a virtual card (burn it).
+ * Delete a virtual card (Burn it).
  */
 export async function deleteCard(cardId, userId) {
-  const { error } = await supabase.rpc('burn_card', {
-    p_card_id: cardId,
-    p_user_id: userId
-  });
+  return apiClient.delete(`/cards/${cardId}`);
+}
 
-  if (error) throw error;
+/**
+ * Reveal full decrypted card details (Zero-Trust Retrieval).
+ */
+export async function revealCard(cardId) {
+  return apiClient.get(`/cards/${cardId}/reveal`);
 }
 
 /* ═══════════════════════════════════════════════════════════════════

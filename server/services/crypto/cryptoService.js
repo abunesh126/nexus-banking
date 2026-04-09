@@ -8,28 +8,27 @@ const logger = require('../../utils/logger');
  */
 class CryptoService {
   /**
-   * Encrypt sensitive data using the current active master key
+   * Encrypt sensitive data using the current active master key and AAD
    */
-  async encryptData(plaintext) {
+  async encryptData(plaintext, aad = null) {
     if (!plaintext) return null;
     
     const { key, version } = keyManager.getActiveKey();
-    const result = encryptionEngine.encrypt(plaintext, key, version);
+    const result = encryptionEngine.encrypt(plaintext, key, version, aad);
     
-    logger.info('Data Encrypted', { version, requestId: 'crypto-op' });
     return result;
   }
 
   /**
-   * Decrypt data by automatically identifying the correct key version
+   * Decrypt data by automatically identifying the correct key version and verifying AAD
    */
-  async decryptData(payload) {
+  async decryptData(payload, aad = null) {
     if (!payload || !payload.version) {
       throw new Error('Invalid encryption payload (Missing Version)');
     }
     
     const key = keyManager.getKeyByVersion(payload.version);
-    const plaintext = encryptionEngine.decrypt(payload, key);
+    const plaintext = encryptionEngine.decrypt(payload, key, aad);
     
     return plaintext;
   }

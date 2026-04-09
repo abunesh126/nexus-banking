@@ -4,7 +4,7 @@ import usePageLoad from "../hooks/usePageLoad";
 import PageSkeleton from "../components/PageSkeleton";
 import { maskSensitive, hasPermission, ROLES } from "../utils/security";
 import { useAuth } from "../context/AuthContext";
-import { getCards, createCard, deleteCard as deleteCardDB } from "../lib/database";
+import { getCards, createCard, deleteCard as deleteCardDB, revealCard } from "../lib/database";
 
 export default function Cards() {
     const loaded = usePageLoad();
@@ -40,7 +40,7 @@ export default function Cards() {
         loadCards();
     }, [user?.id]);
 
-    const toggleReveal = (id) => {
+    const toggleReveal = async (id) => {
         if (!hasPermission(user, ROLES.CUSTOMER)) {
             alert("Unauthorized: High-security clearance required to reveal raw PII.");
             return;
@@ -49,7 +49,20 @@ export default function Cards() {
         if (revealedIds.includes(id)) {
             setRevealedIds(revealedIds.filter(rid => rid !== id));
         } else {
-            setRevealedIds([...revealedIds, id]);
+            // ZERO-TRUST REVEAL: Fetch decrypted data from backend on-demand
+            try {
+                const fullData = await revealCard(id);
+                // Update the specific card in state with decrypted number/cvv
+                setCards(cards.map(c => c.id === id ? {
+                    ...c,
+                    number: fullData.number,
+                    cvv: fullData.cvv
+                } : c));
+                setRevealedIds([...revealedIds, id]);
+            } catch (err) {
+                console.error("Reveal Failed:", err);
+                alert("Identity Verification Failed: Could not securely reveal card details.");
+            }
         }
     };
 
@@ -166,15 +179,11 @@ export default function Cards() {
                                         <p className="text-xl font-mono tracking-[0.2em] mb-4">
                                             {isRevealed ? card.number : maskSensitive(card.number, 4)}
                                         </p>
-                                        <div className="flex gap-8">
                                             <div>
                                                 <p className="text-[8px] uppercase opacity-60">Expiry</p>
                                                 <p className="text-sm font-semibold">{card.expiry}</p>
                                             </div>
-                                            <div>
-                                                <p className="text-[8px] uppercase opacity-60">CVV</p>
-                                                <p className="text-sm font-semibold">{isRevealed ? card.cvv : "***"}</p>
-                                            </div>
+                                            {/* CVV REMOVED FOR COMPLIANCE (PHASE 3) */}
                                         </div>
                                     </div>
 

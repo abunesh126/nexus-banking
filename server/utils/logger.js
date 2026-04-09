@@ -30,22 +30,35 @@ const logger = {
       timestamp: new Date().toISOString(),
       level: 'INFO',
       message,
-      requestId: meta.requestId || uuidv4(),
-      ...maskSensitiveData(meta)
-    };
-    console.log(JSON.stringify(logEntry));
-  },
-  
-  error: (message, meta = {}) => {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      level: 'ERROR',
-      message,
-      requestId: meta.requestId || uuidv4(),
-      ...maskSensitiveData(meta)
-    };
-    console.error(JSON.stringify(logEntry));
-  }
-};
+class Logger {
+  /**
+   * Remove sensitive fields from metadata before logging
+   */
+  sanitize(data) {
+    if (typeof data !== 'object' || data === null) return data;
+    
+    // Recursive sanitization
+    const sanitized = Array.isArray(data) ? [...data] : { ...data };
+    const SENSITIVE_KEYS = ['card_number', 'cvv', 'ciphertext', 'tag', 'token', 'password'];
 
-module.exports = logger;
+    Object.keys(sanitized).forEach(key => {
+      if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
+        sanitized[key] = '[REDACTED]';
+      } else if (typeof sanitized[key] === 'object') {
+        sanitized[key] = this.sanitize(sanitized[key]);
+      }
+    });
+
+    return sanitized;
+  }
+
+  info(message, metadata = {}) {
+    console.info(`[INFO] [${new Date().toISOString()}] ${message}`, this.sanitize(metadata));
+  }
+
+  error(message, metadata = {}) {
+    console.error(`[ERROR] [${new Date().toISOString()}] ${message}`, this.sanitize(metadata));
+  }
+}
+
+module.exports = new Logger();

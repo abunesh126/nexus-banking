@@ -10,12 +10,16 @@ const IV_LENGTH = 12; // Standard 96-bit IV for GCM
  */
 class EncryptionEngine {
   /**
-   * Encrypt plaintext using a versioned key
+   * Encrypt plaintext using a versioned key and AAD binding
    */
-  encrypt(plaintext, key, version) {
+  encrypt(plaintext, key, version, aad = null) {
     try {
       const iv = crypto.randomBytes(IV_LENGTH);
       const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+      
+      if (aad) {
+        cipher.setAAD(Buffer.from(aad));
+      }
       
       let ciphertext = cipher.update(plaintext, 'utf8', 'hex');
       ciphertext += cipher.final('hex');
@@ -35,12 +39,16 @@ class EncryptionEngine {
   }
 
   /**
-   * Decrypt payload and verify integrity via Auth Tag
+   * Decrypt payload and verify integrity via Auth Tag and AAD
    */
-  decrypt(payload, key) {
+  decrypt(payload, key, aad = null) {
     try {
       const { iv, ciphertext, tag } = payload;
       const decipher = crypto.createDecipheriv(ALGORITHM, key, Buffer.from(iv, 'hex'));
+      
+      if (aad) {
+        decipher.setAAD(Buffer.from(aad));
+      }
       
       decipher.setAuthTag(Buffer.from(tag, 'hex'));
       
@@ -49,7 +57,7 @@ class EncryptionEngine {
       
       return plaintext;
     } catch (error) {
-      logger.error('Decryption Integrity Failure (Possible Tampering)', { error: error.message });
+      logger.error('Decryption Integrity Failure (Possible Tampering/AAD Mismatch)', { error: error.message });
       throw new Error('Cryptographic Integrity Breach: Verification Failed');
     }
   }

@@ -187,9 +187,11 @@ CREATE TABLE IF NOT EXISTS public.virtual_cards (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   card_type TEXT NOT NULL DEFAULT 'MAIN' CHECK (card_type IN ('MAIN', 'BURNER')),
-  card_number TEXT NOT NULL,
+  card_brand TEXT DEFAULT 'VISA',    -- Metadata for display
+  card_number TEXT NOT NULL,         -- Encrypted Blob
+  last_four TEXT,                    -- Non-sensitive metadata
   expiry TEXT NOT NULL,
-  cvv TEXT NOT NULL,
+  -- CVV REMOVED FOR COMPLIANCE (PHASE 3)
   label TEXT DEFAULT 'Primary Debit',
   color TEXT DEFAULT 'bg-primary',
   created_at TIMESTAMPTZ DEFAULT now()
@@ -201,7 +203,11 @@ REVOKE ALL ON public.virtual_cards FROM PUBLIC;
 CREATE POLICY "Users and privileged can view cards"
   ON public.virtual_cards FOR SELECT
   USING (
-    (auth.uid() = user_id) OR (private.has_role('manager'))
+    CASE 
+      WHEN (auth.uid() = user_id OR private.has_role('manager')) 
+      THEN (private.log_access_event('DATA_ACCESS', 'virtual_cards') IS NULL) 
+      ELSE (private.log_access_event('UNAUTHORIZED_ACCESS', 'virtual_cards') IS NULL AND FALSE) 
+    END
   );
 
 CREATE POLICY "Users can create own cards"
