@@ -23,6 +23,37 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: 'Unauthorized: Invalid token' });
     }
 
+    // SESSION BINDING: Anti-Session Hijacking Check
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('last_ip, last_user_agent')
+      .eq('id', user.id)
+      .single();
+
+    if (profile) {
+      const currentIp = req.ip;
+      const currentUA = req.headers['user-agent'];
+      const currentHash = mfaService.getFingerprintHash(currentIp, currentUA);
+
+      // 1. PERFECT MATCH: Standard flow
+      if (profile.fingerprint_hash === currentHash) {
+          req.authenticated_device = true;
+      } 
+      // 2. RISK-BASED EVALUATION (Elite Hardening)
+      else if (profile.fingerprint_hash) {
+          const uaMatch = profile.last_user_agent === currentUA;
+          
+          if (uaMatch) {
+              // SOFT MISMATCH (Handover): Log and Allow
+              logger.info('Identity Soft Mismatch (Handover)', { userId: user.id, ip: currentIp });
+          } else {
+              // STRICT MISMATCH (New Device): Flag for Re-MFA
+              logger.error('Identity Strict Mismatch (New Device)', { userId: user.id, ip: currentIp });
+              req.mfa_required = true; 
+          }
+      }
+    }
+
     req.user = user;
     next();
   } catch (err) {

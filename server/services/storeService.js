@@ -56,6 +56,18 @@ class StoreService {
     this.attemptCache.set(userId, updated);
     return updated;
   }
+
+  incrementMfaAttempts(userId) {
+    const key = `mfa_attempts:${userId}`;
+    const current = this.attemptCache.get(key) || 0;
+    const updated = current + 1;
+    this.attemptCache.set(key, updated, 300); // 5 minute window
+    return updated;
+  }
+
+  resetMfaAttempts(userId) {
+    this.attemptCache.del(`mfa_attempts:${userId}`);
+  }
 }
 
 module.exports = new StoreService();

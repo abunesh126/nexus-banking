@@ -166,8 +166,10 @@ export async function deleteCard(cardId, userId) {
 /**
  * Reveal full decrypted card details (Zero-Trust Retrieval).
  */
-export async function revealCard(cardId) {
-  return apiClient.get(`/cards/${cardId}/reveal`);
+export async function revealCard(cardId, revealToken = null) {
+  return apiClient.get(`/cards/${cardId}/reveal`, {
+    headers: revealToken ? { 'x-reveal-token': revealToken } : {}
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════════

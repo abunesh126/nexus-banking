@@ -5,6 +5,7 @@ import PageSkeleton from "../components/PageSkeleton";
 import { maskSensitive, hasPermission, ROLES } from "../utils/security";
 import { useAuth } from "../context/AuthContext";
 import { getCards, createCard, deleteCard as deleteCardDB, revealCard } from "../lib/database";
+import MFAModal from "../components/MFAModal";
 
 export default function Cards() {
     const loaded = usePageLoad();
@@ -13,6 +14,7 @@ export default function Cards() {
     const [cards, setCards] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [mfaModal, setMfaModal] = useState({ isOpen: false, targetId: null });
 
     // Load cards from Supabase on mount
     useEffect(() => {
@@ -40,7 +42,7 @@ export default function Cards() {
         loadCards();
     }, [user?.id]);
 
-    const toggleReveal = async (id) => {
+    const toggleReveal = async (id, revealToken = null) => {
         if (!hasPermission(user, ROLES.CUSTOMER)) {
             alert("Unauthorized: High-security clearance required to reveal raw PII.");
             return;
@@ -49,10 +51,8 @@ export default function Cards() {
         if (revealedIds.includes(id)) {
             setRevealedIds(revealedIds.filter(rid => rid !== id));
         } else {
-            // ZERO-TRUST REVEAL: Fetch decrypted data from backend on-demand
             try {
-                const fullData = await revealCard(id);
-                // Update the specific card in state with decrypted number/cvv
+                const fullData = await revealCard(id, revealToken);
                 setCards(cards.map(c => c.id === id ? {
                     ...c,
                     number: fullData.number,
@@ -60,8 +60,13 @@ export default function Cards() {
                 } : c));
                 setRevealedIds([...revealedIds, id]);
             } catch (err) {
-                console.error("Reveal Failed:", err);
-                alert("Identity Verification Failed: Could not securely reveal card details.");
+                // If MFA is required or expired, trigger the challenge
+                if (err.message.includes("MFA") || err.message.includes("Expired") || err.message.includes("token")) {
+                    setMfaModal({ isOpen: true, targetId: id });
+                } else {
+                    console.error("Reveal Failed:", err);
+                    alert(`${err.message || 'Identity Verification Failed'}`);
+                }
             }
         }
     };
@@ -220,6 +225,13 @@ export default function Cards() {
                     </div>
                 </div>
             </div>
+
+            <MFAModal 
+                isOpen={mfaModal.isOpen}
+                onClose={() => setMfaModal({ isOpen: false, targetId: null })}
+                onSuccess={(token) => toggleReveal(mfaModal.targetId, token)}
+                title="MFA Authorization Required"
+            />
         </div>
     );
 }

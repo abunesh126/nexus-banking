@@ -67,7 +67,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   current_salt TEXT,                 -- Per-user unique cryptographic salt
   failed_attempts INTEGER DEFAULT 0,  -- For anomaly blocking
   blocked_until TIMESTAMPTZ,         -- Lockout timestamp
-  last_ip TEXT,                      -- For session binding checks
+  last_ip TEXT,                      -- Deprecated: Use fingerprint_hash
+  last_user_agent TEXT,              -- Deprecated: Use fingerprint_hash
+  fingerprint_hash TEXT,             -- SHA-256(IP + UA + Secret)
+  trusted_devices JSONB DEFAULT '[]', -- List of { id, trusted_at, last_seen }
+  backup_codes JSONB DEFAULT '[]',    -- Encrypted recovery codes
   
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
