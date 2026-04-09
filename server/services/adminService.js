@@ -74,6 +74,28 @@ class AdminService {
     }
   }
 
+  /**
+   * Fetch all security events/anomalies for the security dashboard
+   */
+  async getSecurityEvents() {
+    try {
+      const { data: events } = await supabaseAdmin
+        .from('security_events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      return {
+        events,
+        timestamp: new Date().toISOString(),
+        critical_count: events.filter(e => e.severity === 'CRITICAL').length
+      };
+    } catch (err) {
+      logger.error('Security Event Fetch Failure', { error: err.message });
+      throw new Error('Failed to fetch security events');
+    }
+  }
+
   async verifyFullSystemIntegrity() {
     // Shared with ledgerJob.js
     // Re-verify the sum of balances, the last 50 chained hashes, and genesis

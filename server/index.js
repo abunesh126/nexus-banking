@@ -32,22 +32,39 @@ app.set('trust proxy', 1);
 
 // 2. Core Middlewares
 app.use(express.json({ limit: '10kb' })); 
+
+// 2.0 PROTOCOL & TLS ENFORCEMENT
+app.use((req, res, next) => {
+  // In Production (or behind trust proxy), enforce HTTPS
+  if (req.headers["x-forwarded-proto"] && req.headers["x-forwarded-proto"] !== "https") {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
 app.use(cors({
-  origin: ['http://localhost:5173'], // Restrict to trusted frontend
+  origin: ['http://localhost:5173'], 
   credentials: true
 })); 
 app.use(morgan('combined')); 
 
-// 2.1 SIGNED RESPONSE MIDDLEWARE (HMAC Signature)
+// 2.1 ADVANCED SIGNED RESPONSE MIDDLEWARE (Anti-Replay + Versioning)
 app.use((req, res, next) => {
   const originalJson = res.json;
   res.json = function (data) {
+    const payload = {
+      data,
+      timestamp: Date.now(),
+      nonce: crypto.randomUUID(),
+      sig_version: "v1"
+    };
+
     const signature = crypto.createHmac('sha256', process.env.TRANSACTION_MASTER_SECRET || 'GLOBAL_LEDGER_SALT_001')
-      .update(JSON.stringify(data))
+      .update(JSON.stringify(payload))
       .digest('hex');
     
     // Attach signature in body for anti-tampering
-    const signedPayload = { data, signature };
+    const signedPayload = { ...payload, signature };
     return originalJson.call(this, signedPayload);
   };
   next();

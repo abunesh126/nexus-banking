@@ -7,6 +7,7 @@ import {
   Award,
   BookOpen,
   CreditCard, // Innovation: Virtual Cards
+  Shield, // Phase 9: SOC
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,7 @@ const NAV_LINKS = [
   { to: "/cibil", label: "CIBIL Score", icon: PieChart },
   { to: "/rewards", label: "Rewards", icon: Award },
   { to: "/passbook", label: "Passbook", icon: BookOpen },
+  { to: "/admin/security", label: "Security Ops", icon: Shield, adminOnly: true },
 ];
 
 export default function Sidebar({ onNavClick }) {
@@ -79,7 +81,7 @@ export default function Sidebar({ onNavClick }) {
 
       {/* ── Nav links ── */}
       <nav className={`flex-1 py-4 space-y-0.5 ${collapsed ? "px-2" : "px-3"}`}>
-        {NAV_LINKS.map(({ to, label, icon: Icon }) => (
+        {NAV_LINKS.filter(link => !link.adminOnly || user?.role === 'admin').map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}

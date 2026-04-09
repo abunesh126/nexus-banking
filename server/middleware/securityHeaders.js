@@ -1,16 +1,21 @@
 const helmet = require('helmet');
 
+/**
+ * PRODUCTION HARDENING: Strict Security Headers
+ * - CSP: Blocks all inline scripts and external untrusted sources.
+ * - HSTS: 1 Year Max-Age + Preload support.
+ */
 const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "https://*.supabase.co"], // Allow Supabase connections
-      styleSrc: ["'self'", "'unsafe-inline'"], // Required for Tailwind (until Phase 9)
-      imgSrc: ["'self'", "data:", "https://*.supabase.co"],
+      scriptSrc: ["'self'"], // No 'unsafe-inline' or 'unsafe-eval'
+      connectSrc: ["'self'"], // Only local proxy allowed (Zero-Trust)
+      styleSrc: ["'self'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
-      upgradeInsecureRequests: [],
+      upgradeInsecureRequests: [], // Force HTTPS upgrade
     },
   },
   crossOriginEmbedderPolicy: true,
@@ -20,7 +25,7 @@ const securityHeaders = helmet({
   frameguard: { action: "deny" },
   hidePoweredBy: true,
   hsts: {
-    maxAge: 31536000,
+    maxAge: 31536000, // 365 Days
     includeSubDomains: true,
     preload: true,
   },

@@ -13,6 +13,7 @@ import CIBIL from "./pages/CIBIL";
 import Rewards from "./pages/Rewards";
 import Passbook from "./pages/Passbook";
 import Cards from "./pages/Cards"; // Innovation: Virtual Cards
+import AdminSecurity from "./pages/AdminSecurity"; // Phase 9: SOC Dashboard
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
                 <Route path="/cibil" element={<CIBIL />} />
                 <Route path="/rewards" element={<Rewards />} />
                 <Route path="/passbook" element={<Passbook />} />
+                <Route path="/admin/security" element={<AdminSecurity />} />
               </Route>
             </Route>
 

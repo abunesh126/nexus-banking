@@ -43,4 +43,17 @@ router.post('/system/unlock', async (req, res) => {
     }
 });
 
+/**
+ * @route   GET /api/admin/security/events
+ * @desc    Fetch real-time security events and anomaly alerts
+ */
+router.get('/security/events', async (req, res) => {
+    try {
+        const eventsData = await adminService.getSecurityEvents();
+        res.json(eventsData);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

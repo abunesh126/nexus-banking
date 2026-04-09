@@ -1,7 +1,10 @@
+const BACKEND_URL = 'http://localhost:8001/api';
+
 /**
- * Hardened API Client
- * Centralizes all communication, enforces timeouts, and handles security signals.
- * ZERO-TRUST: No direct Supabase SDK dependency.
+ * Hardened API Client (Phase 9.5 - Zero-Trust Validator)
+ * - No symmetric secrets stored client-side.
+ * - Performs structural and freshness validation (Anti-Replay).
+ * - Backend remains the sole cryptographic authority.
  */
 async function apiRequest(endpoint, options = {}) {
   // 1. Get session from manual storage
@@ -38,9 +41,7 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     if (response.status === 401) {
-      // Session Expired - Forced Logout
-      localStorage.removeItem('nexus_session');
-      window.location.href = '/login';
+      handleSecurityFailure();
       throw new Error('SESSION_EXPIRED');
     }
 
@@ -56,13 +57,59 @@ async function apiRequest(endpoint, options = {}) {
 
     if (response.status === 204) return null;
 
-    // 4. SIGNED RESPONSE UNWRAPPING
+    // 4. SAFE RESPONSE VALIDATION (Zero-Trust Model)
     const result = await response.json();
-    return result.data; // Discard signature, keep verified data
+    
+    try {
+      validateResponse(result);
+    } catch (err) {
+      console.error(`SECURITY_VIOLATION: ${err.message}`);
+      handleSecurityFailure();
+      throw err;
+    }
+
+    return result.data;
 
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('API_TIMEOUT');
     throw err;
+  }
+}
+
+/**
+ * Zero-Trust Validator: Checks freshness and structure.
+ * Does NOT perform cryptographic verification using shared secrets.
+ */
+function validateResponse(response) {
+  // 1. Timestamp freshness (anti-replay) - Reject if > 10s old
+  const ageInMs = Date.now() - response.timestamp;
+  if (!response.timestamp || ageInMs > 10000 || ageInMs < -5000) {
+    throw new Error("REPLAY_DETECTED");
+  }
+
+  // 2. Basic schema validation
+  if (!response.data || typeof response.data !== "object") {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  // 3. Nonce presence
+  if (!response.nonce) {
+    throw new Error("MISSING_NONCE");
+  }
+
+  return true;
+}
+
+/**
+ * Protective Logout: Clears all local state and forces a fresh reload.
+ */
+function handleSecurityFailure() {
+  localStorage.removeItem("nexus_session");
+  // Use reload to clear all in-memory states
+  if (!window.location.pathname.includes('/login')) {
+    window.location.href = '/login?reason=SECURITY_FAILURE';
+  } else {
+    window.location.reload();
   }
 }
 

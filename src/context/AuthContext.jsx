@@ -18,8 +18,20 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initialize = async () => {
+      // 1. Validate Device Binding (Phase 9)
+      const currentFingerprint = btoa(navigator.userAgent + screen.width + screen.height);
+      const storedFingerprint = localStorage.getItem('nexus_fingerprint');
+
       const sessionStr = localStorage.getItem('nexus_session');
+      
       if (sessionStr) {
+        if (storedFingerprint && storedFingerprint !== currentFingerprint) {
+          console.warn("SECURITY_ALERT: Device fingerprint mismatch.");
+          logout();
+          setIsLoaded(true);
+          return;
+        }
+
         try {
           const session = JSON.parse(sessionStr);
           if (session?.user) {
@@ -28,6 +40,9 @@ export function AuthProvider({ children }) {
         } catch (err) {
           localStorage.removeItem('nexus_session');
         }
+      } else {
+        // First time? Set fingerprint
+        localStorage.setItem('nexus_fingerprint', currentFingerprint);
       }
       setIsLoaded(true);
     };
