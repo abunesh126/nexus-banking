@@ -56,4 +56,30 @@ router.get('/security/events', async (req, res) => {
     }
 });
 
+/**
+ * @route   GET /api/admin/compliance/status
+ * @desc    Fetch system compliance health and backup status
+ */
+router.get('/compliance/status', async (req, res) => {
+    try {
+        const data = await adminService.getComplianceReport();
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * @route   POST /api/admin/system/backup
+ * @desc    Manually trigger an encrypted system snapshot
+ */
+router.post('/system/backup', async (req, res) => {
+    try {
+        const result = await adminService.triggerManualBackup(req.user.id);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

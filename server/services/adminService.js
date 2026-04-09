@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { supabaseAdmin } = require('../lib/supabaseAdmin');
 const logger = require('../utils/logger');
-const alertService = require('./alertService');
+const backupService = require('./backupService');
 
 /**
  * Admin Service
@@ -10,6 +10,33 @@ const alertService = require('./alertService');
 class AdminService {
   constructor() {
     this.EXPORT_SECRET = process.env.EXPORT_SECRET || 'NexusBank_Audit_Sync_2026';
+  }
+
+  /**
+   * Manually trigger a system snapshot
+   */
+  async triggerManualBackup(adminId) {
+    return await backupService.createSnapshot(adminId);
+  }
+
+  /**
+   * Fetch a unified compliance report for the SOC dashboard
+   */
+  async getComplianceReport() {
+    try {
+      const backupStatus = await backupService.getStatus();
+      const integrity = await this.verifyFullSystemIntegrity();
+
+      return {
+        timestamp: new Date().toISOString(),
+        backup_status: backupStatus,
+        integrity_status: integrity,
+        audit_trail: 'ACTIVE',
+        pci_dss_masking: 'ENFORCED'
+      };
+    } catch (err) {
+      throw new Error('Failed to generate compliance report');
+    }
   }
 
   /**

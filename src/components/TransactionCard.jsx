@@ -1,4 +1,6 @@
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { maskSensitive } from "../utils/security";
 
 const CATEGORY_COLORS = {
   Income:        "bg-success/10 text-success border-success/20",
@@ -18,9 +20,17 @@ function formatDate(dateStr) {
 }
 
 export default function TransactionCard({ transaction }) {
+  const { user } = useAuth();
   const { type, title, merchant, amount, date, category, icon } = transaction;
   const isCredit = type === "credit";
   const catCls   = CATEGORY_COLORS[category] ?? "bg-gray-100 text-text-muted border-border-card";
+
+  // PCI-DSS Masking: Mask merchant identity if user is a customer
+  const isUpi = category === "UPI" || (merchant && merchant.includes("@"));
+  const displayMerchant = (isUpi && user?.role !== 'admin') 
+    ? maskSensitive(merchant, 6) // Mask but keep first 6 (e.g. name***@upi)
+    : merchant;
+
 
   return (
     <div className="
@@ -43,7 +53,7 @@ export default function TransactionCard({ transaction }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-text-main text-sm font-semibold truncate leading-tight">{title}</p>
-          <p className="text-text-muted text-xs truncate leading-tight mt-0.5">{merchant} · {formatDate(date)}</p>
+          <p className="text-text-muted text-xs truncate leading-tight mt-0.5">{displayMerchant} · {formatDate(date)}</p>
         </div>
       </div>
 
