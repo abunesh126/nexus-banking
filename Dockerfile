@@ -17,7 +17,9 @@ RUN npm install
 
 # Copy source and build
 COPY . .
-RUN npm run build
+RUN VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
+    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY \
+    npm run build
 
 # Stage 2: Serve the app with Nginx (using standard Debian for better compatibility)
 FROM nginx:stable
