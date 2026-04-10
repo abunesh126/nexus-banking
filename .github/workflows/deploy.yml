@@ -28,7 +28,10 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/nexusbank:${{ github.sha }}
+          docker build . \
+            --build-arg VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }} \
+            --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/nexusbank:${{ github.sha }}
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/nexusbank:${{ github.sha }}
 
       - name: Deploy to Azure Container Apps
