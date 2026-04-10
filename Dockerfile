@@ -1,5 +1,5 @@
 # Stage 1: Build the React application
-FROM node:20-alpine AS build
+FROM node:20 AS build
 
 WORKDIR /app
 
@@ -19,8 +19,8 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve the app with Nginx
-FROM nginx:stable-alpine
+# Stage 2: Serve the app with Nginx (using standard Debian for better compatibility)
+FROM nginx:stable
 
 # Copy custom nginx config for SPA routing
 COPY nginx.conf /etc/nginx/conf.d/default.conf
