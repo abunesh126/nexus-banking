@@ -207,8 +207,12 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Don't render children until we've checked the session
-  if (!isLoaded) return null;
+  // Don't render a blank screen while initializing
+  if (!isLoaded) return (
+    <div className="min-h-screen bg-bg-page flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent animate-spin rounded-full"></div>
+    </div>
+  );
 
   return (
     <AuthContext.Provider value={{
