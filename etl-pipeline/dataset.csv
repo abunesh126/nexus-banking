@@ -1,0 +1,6 @@
+transaction_id,user_id,merchant,amount,currency,risk_score,timestamp
+TXN-1001,user-x-123,Amazon Web Services,150.00,INR,15,2026-04-10T12:00:00Z
+TXN-1002,user-x-123,Steam Games,4500.00,INR,40,2026-04-10T14:30:00Z
+TXN-1003,user-y-456,Unknown IP Transfer,85000.00,INR,95,2026-04-11T02:15:00Z
+TXN-1004,user-z-789,Swiggy Food,450.00,INR,5,2026-04-11T09:00:00Z
+TXN-1005,user-y-456,Crypto Exchange,150000.00,INR,98,2026-04-11T10:15:00Z
