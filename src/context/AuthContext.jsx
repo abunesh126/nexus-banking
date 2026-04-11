@@ -20,12 +20,24 @@ export function AuthProvider({ children }) {
 
   /* ── Initialize: Listen for Supabase auth changes ── */
   useEffect(() => {
-    // 1. Get the current session (page load / refresh)
+    // 1. Get the current session with a timeout fallback
+    const timeout = setTimeout(() => {
+      if (!isLoaded) {
+        console.warn("Auth initialization timed out. Proceeding...");
+        setIsLoaded(true);
+      }
+    }, 5000);
+
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       if (currentSession?.user) {
         await loadUserProfile(currentSession.user.id, currentSession.user.email);
       }
+      clearTimeout(timeout);
+      setIsLoaded(true);
+    }).catch(err => {
+      console.error("Auth initialization error:", err);
+      clearTimeout(timeout);
       setIsLoaded(true);
     });
 
