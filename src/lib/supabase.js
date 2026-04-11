@@ -15,8 +15,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
+    // FIX: Explicitly bypass the lock mechanism to prevent initialization timeouts
+    lock: async (name, acquireTimeout, fn) => await fn(),
     persistSession: true,
+    autoRefreshToken: true,
     detectSessionInUrl: true,
   },
 });
