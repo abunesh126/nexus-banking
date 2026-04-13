@@ -4,36 +4,62 @@ import { useBank } from "../context/BankContext";
 import TransactionCard from "../components/TransactionCard";
 import PageSkeleton from "../components/PageSkeleton";
 import usePageLoad from "../hooks/usePageLoad";
+import DigitalReceipt from "../components/DigitalReceipt";
+import { signEmailMessage } from "../utils/security";
+import { useAuth } from "../context/AuthContext";
 
-const CATEGORIES = ["All","Income","Shopping","Bills","Food","Travel","Entertainment","UPI","Rewards"];
-const PAGE_SIZE   = 6;
+const CATEGORIES = ["All", "Income", "Shopping", "Bills", "Food", "Travel", "Entertainment", "UPI", "Rewards"];
+const PAGE_SIZE = 6;
 
 export default function Passbook() {
   const { transactions, balance } = useBank();
+  const { user, userKeys } = useAuth();
   const loaded = usePageLoad();
-  const [search,   setSearch]   = useState("");
+  const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [page, setPage]         = useState(1);
+  const [page, setPage] = useState(1);
 
-  const totalCredit = transactions.filter((t) => t.type === "credit").reduce((s,t) => s + t.amount, 0);
-  const totalDebit  = transactions.filter((t) => t.type === "debit").reduce((s,t)  => s + t.amount, 0);
+  const [selectedTxn, setSelectedTxn] = useState(null);
+  const [txnSignature, setTxnSignature] = useState(null);
+
+  const handleSelectTxn = async (txn) => {
+    // Generate an RSA-PSS digital signature for this transaction instance
+    const signature = await signEmailMessage(
+      `TXN_VERIFY_Institutional_Receipt_${txn.id}_${txn.amount}`,
+      user?.id || 'anonymous',
+      userKeys?.privateKey // Use the institutional private key if available
+    );
+    setTxnSignature(signature);
+    setSelectedTxn(txn);
+  };
+
+  const totalCredit = transactions.filter((t) => t.type === "credit").reduce((s, t) => s + t.amount, 0);
+  const totalDebit = transactions.filter((t) => t.type === "debit").reduce((s, t) => s + t.amount, 0);
 
   const filtered = useMemo(() => transactions.filter((t) => {
-    const matchSearch   = !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.merchant?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.merchant?.toLowerCase().includes(search.toLowerCase());
     const matchCategory = category === "All" || t.category === category;
-    const matchType     = typeFilter === "all" || t.type === typeFilter;
+    const matchType = typeFilter === "all" || t.type === typeFilter;
     return matchSearch && matchCategory && matchType;
   }), [transactions, search, category, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const goPage     = (n) => setPage(Math.min(Math.max(1, n), totalPages));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const goPage = (n) => setPage(Math.min(Math.max(1, n), totalPages));
 
   if (!loaded) return <PageSkeleton rows={5} />;
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-3xl mx-auto page-enter">
+      {/* Digital Receipt Modal with S/MIME logic */}
+      {selectedTxn && (
+        <DigitalReceipt
+          transaction={selectedTxn}
+          signature={txnSignature}
+          onClose={() => setSelectedTxn(null)}
+        />
+      )}
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-orange-100 border border-orange-200 flex items-center justify-center flex-shrink-0">
@@ -86,7 +112,7 @@ export default function Passbook() {
         </div>
         {/* Type filter + Category */}
         <div className="flex flex-wrap items-center gap-2">
-          {["all","credit","debit"].map((t) => (
+          {["all", "credit", "debit"].map((t) => (
             <button key={t} onClick={() => { setTypeFilter(t); setPage(1); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all duration-150 min-h-[36px]
                 ${typeFilter === t ? "bg-accent text-white" : "bg-bg-page border border-border-card text-text-muted hover:text-text-main hover:border-secondary/40"}`}>
@@ -114,7 +140,11 @@ export default function Passbook() {
           </div>
         ) : (
           <div className="space-y-2">
-            {paginated.map((txn) => <TransactionCard key={txn.id} transaction={txn} />)}
+            {paginated.map((txn) => (
+              <div key={txn.id} onClick={() => handleSelectTxn(txn)} className="cursor-pointer">
+                <TransactionCard transaction={txn} />
+              </div>
+            ))}
           </div>
         )}
 

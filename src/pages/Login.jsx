@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, Landmark, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { generateCurrentMFAToken, verifyMFAToken } from "../utils/security";
 
 function Field({ label, error, children }) {
   return (
@@ -50,6 +51,7 @@ export default function Login() {
   const [generatedOtp, setGeneratedOtp] = useState("");
   const [enteredOtp, setEnteredOtp] = useState("");
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -62,14 +64,12 @@ export default function Login() {
     try {
       await new Promise((r) => setTimeout(r, 700));
       // First Step: Verify Password via Supabase
-      await login({ email, password, rememberMe });
+      await login({ email, password });
 
-      // Password correct! Now generate OTP
-      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      // Password correct! Now generate dynamic TOTP (Institutional Grade)
+      const otp = await generateCurrentMFAToken(email);
       setGeneratedOtp(otp);
       setOtpMode(true);
-
-      // We removed the alert() to use the new UI-based OTP banner instead.
     } catch (err) {
       setGeneralErr(err.message);
     } finally {
@@ -83,10 +83,11 @@ export default function Login() {
 
     try {
       await new Promise((r) => setTimeout(r, 500));
-      if (enteredOtp === generatedOtp) {
+      const isValid = await verifyMFAToken(enteredOtp, email);
+      if (isValid) {
         navigate(from, { replace: true });
       } else {
-        setGeneralErr("Invalid OTP. Please try again.");
+        setGeneralErr("Invalid or expired MFA token. Please sync your device.");
       }
     } finally {
       setLoading(false);
@@ -210,11 +211,11 @@ export default function Login() {
                   <input id="login-otp" type="text" value={enteredOtp}
                     onChange={(e) => setEnteredOtp(e.target.value)}
                     className={`${inputCls(!!errors.otp)} pl-10 text-center tracking-[1em] text-xl font-black text-primary`}
-                    placeholder="0000" maxLength={4} autoComplete="one-time-code" inputMode="numeric" autoFocus />
+                    placeholder="000000" maxLength={6} autoComplete="one-time-code" inputMode="numeric" autoFocus />
                 </div>
               </Field>
 
-              <button id="otp-submit" type="submit" disabled={loading || enteredOtp.length !== 4}
+              <button id="otp-submit" type="submit" disabled={loading || enteredOtp.length !== 6}
                 className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover
                   disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold
                   rounded-xl py-3 transition-all duration-150 shadow-md transform active:scale-[0.98] min-h-[48px] text-sm tracking-wide">

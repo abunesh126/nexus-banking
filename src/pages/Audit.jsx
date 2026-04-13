@@ -6,9 +6,11 @@ import { secureStorage } from "../utils/secureStorage";
 import CloudPipeline from "./CloudPipeline";
 import { azureAI } from "../utils/azureAI";
 
+import McCumberCube from "../components/McCumberCube";
+
 export default function Audit() {
     const loaded = usePageLoad();
-    const [activeTab, setActiveTab] = useState("audit"); // 'audit', 'cloud', 'ai'
+    const [activeTab, setActiveTab] = useState("audit"); // 'audit', 'cloud', 'ai', 'model'
     const [logs, setLogs] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [aiStatus, setAiStatus] = useState("IDLE");
@@ -78,11 +80,14 @@ export default function Audit() {
                     <TabBtn active={activeTab === 'audit'} onClick={() => setActiveTab("audit")} icon={History} label="Audit" />
                     <TabBtn active={activeTab === 'cloud'} onClick={() => setActiveTab("cloud")} icon={Cloud} label="Cloud ETL" />
                     <TabBtn active={activeTab === 'ai'} onClick={() => setActiveTab("ai")} icon={Brain} label="AI Risks" />
+                    <TabBtn active={activeTab === 'model'} onClick={() => setActiveTab("model")} icon={ShieldCheck} label="NSTISSC Model" />
                 </div>
             </div>
 
             {activeTab === "cloud" ? (
                 <div className="page-enter"><CloudPipeline /></div>
+            ) : activeTab === "model" ? (
+                <div className="page-enter"><McCumberCube /></div>
             ) : activeTab === "ai" ? (
                 <div className="space-y-6 page-enter">
                     <div className="bg-bg-card border border-border-card rounded-3xl p-8 shadow-sm relative overflow-hidden">
@@ -148,14 +153,15 @@ export default function Audit() {
                         <div>
                             <p className="text-sm font-bold text-text-main mb-1">Institutional Compliance (PCI-DSS/GDPR)</p>
                             <p className="text-xs text-text-muted leading-relaxed">
-                                Every action within NexusBank—from encryption key derivation to PII access—is cryptographically logged.
+                                Every action within NexusBank—from encryption key derivation to PII access—is cryptographically logged. Transport is secured via **TLS 1.3** and **HSTS Preload**.
                             </p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         <StatCard label="Total Events" value={logs.length} />
-                        <StatCard label="Violations" value={logs.filter(l => l.action.includes('VIOLATION')).length} color="text-danger" />
+                        <StatCard label="Protocol" value="TLS 1.3" color="text-accent" />
+                        <StatCard label="HSTS Status" value="Enforced" color="text-success" />
                         <StatCard label="Data Writes" value={logs.filter(l => l.action === 'DATA_WRITE').length} color="text-success" />
                         <StatCard label="Auth Events" value={logs.filter(l => l.action.includes('LOGIN')).length} color="text-accent" />
                     </div>

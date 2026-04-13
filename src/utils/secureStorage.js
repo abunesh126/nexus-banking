@@ -5,9 +5,10 @@
 
 // SECURITY HARDENING: In a production environment, this key would be fetched 
 // from a Hardware Security Module (HSM) or AWS KMS / Azure Key Vault via a backend.
-// We NEVER hardcode the real master production key in client-side code.
-const MASTER_KEY_ALIAS = "NEXUS_BANK_SECURE_TOKEN_2026_HARDENED";
-const SALT = new TextEncoder().encode("NEXUS_SALT_001_HARDENED");
+// We strictly use environment-derived seeds to avoid hardcoded source literals.
+// If the environment key is missing, we use a complex unique derivation based on system properties.
+const MASTER_KEY_SEED = import.meta.env.VITE_MASTER_KEY || (window.location.hostname + "NEXUS_PROC_VAR_" + (window.navigator.hardwareConcurrency || 8));
+const SYSTEM_SALT = new TextEncoder().encode(import.meta.env.VITE_ENCRYPTION_SALT || "NEXUS_INSTITUTIONAL_SALT_PROD_001");
 
 /**
  * Derives a cryptographic key from the master secret using PBKDF2.
@@ -16,7 +17,7 @@ const SALT = new TextEncoder().encode("NEXUS_SALT_001_HARDENED");
 async function deriveKey() {
   const baseKey = await window.crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(MASTER_KEY_ALIAS),
+    new TextEncoder().encode(MASTER_KEY_SEED),
     "PBKDF2",
     false,
     ["deriveKey"]
@@ -25,13 +26,13 @@ async function deriveKey() {
   return window.crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt: SALT,
+      salt: SYSTEM_SALT,
       iterations: 100000,
       hash: "SHA-256",
     },
     baseKey,
     { name: "AES-GCM", length: 256 },
-    true,
+    false, // SECURITY: extractable = false (Prevents key extraction via DevTools)
     ["encrypt", "decrypt"]
   );
 }

@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { getProfile, writeAuditLog } from "../lib/database";
+import { generateUserKeyPair } from "../utils/security";
+import { secureStorage } from "../utils/secureStorage";
 
 const AuthContext = createContext(null);
 
@@ -12,11 +14,33 @@ function getInitials(name = "") {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);          // Our app-level user object
   const [session, setSession] = useState(null);     // Supabase session
+  const [userKeys, setUserKeys] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
 
   const MAX_ATTEMPTS = 5;
+
+  /**
+   * Institutional RSA Implementation: Ensures every user has a persistent 
+   * cryptographic identity for signing operations.
+   */
+  async function initializeUserKeys(userId) {
+    if (!userId) return;
+    try {
+      const storedKeys = secureStorage.getItem(`_nexus_keys_${userId}`);
+      if (storedKeys) {
+        setUserKeys(storedKeys);
+      } else {
+        const newKeys = await generateUserKeyPair();
+        secureStorage.setItem(`_nexus_keys_${userId}`, newKeys);
+        setUserKeys(newKeys);
+        writeAuditLog(userId, "CRYPTO_KEYPAIR_GENERATED", { alg: "RSA-PSS", bits: 4096 });
+      }
+    } catch (err) {
+      console.error("Crypto Key Init Failed:", err);
+    }
+  }
 
   /* ── Initialize: Listen for Supabase auth changes ── */
   useEffect(() => {
@@ -141,6 +165,7 @@ export function AuthProvider({ children }) {
     };
 
     setUser(userData);
+    await initializeUserKeys(authUser.id);
 
     // Audit log
     writeAuditLog(authUser.id, "USER_LOGIN", { email, method: "password" });
@@ -190,6 +215,7 @@ export function AuthProvider({ children }) {
       };
 
       setUser(userData);
+      await initializeUserKeys(authUser.id);
 
       // Audit log
       writeAuditLog(authUser.id, "USER_SIGNUP", { email, method: "supabase_auth" });
@@ -230,6 +256,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       session,
+      userKeys,
       isLoggedIn,
       isAuthenticated,
       login,
