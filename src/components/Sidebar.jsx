@@ -7,6 +7,8 @@ import {
   Award,
   BookOpen,
   CreditCard, // Innovation: Virtual Cards
+  History, // Institutional: Audit Logs
+  Cloud, // Cloud: ETL Pipeline
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -18,6 +20,7 @@ const NAV_LINKS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/payments", label: "Payments", icon: Send },
   { to: "/cards", label: "Virtual Cards", icon: CreditCard }, // INNOVATION
+  { to: "/audit", label: "SOC Audit Logs", icon: History }, // INSTITUTIONAL
   { to: "/cibil", label: "CIBIL Score", icon: PieChart },
   { to: "/rewards", label: "Rewards", icon: Award },
   { to: "/passbook", label: "Passbook", icon: BookOpen },

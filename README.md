@@ -1,209 +1,62 @@
-# NexusBank — Application Security Engineering (ASE) Comprehensive Documentation
-**Professional Implementation Report for Data Information and Security (DIS)**
+# 🏛️ NexusBank: Institutional Security & Cloud Intelligence
+
+NexusBank is a high-maturity, security-first banking application designed for institutional-grade compliance and cloud-native resilience. The platform integrates advanced AI risk analytics, secure ETL pipelines, and a hardened zero-trust architecture.
 
 ---
 
-## 🏛️ 1. Executive Summary & Security Vision
-**NexusBank** is a premier Neobanking platform implementing a multi-layered **Defense-in-Depth** and **Zero-Trust** security architecture. In an era of high-frequency fraud and automated cyber-attacks, NexusBank moves beyond traditional "perimeter security" to focus on **Behavioral Trust & Cryptographic Integrity**.
+## 🚀 Cloud-Native Evolution (Assessment Summary)
 
-### **The Three Pillars (CIA Triad)**
-1.  **Confidentiality**: Ensuring sensitive info is invisible to unauthorized actors even if they have database access.
-2.  **Integrity**: Guaranteeing that money transferred = money received, and balances cannot be "injected" at rest.
-3.  **Availability**: Protecting the system from DDoS/Brute-force attempts to ensure 24/7 financial access.
+### 📊 Topic 1: Managed Cloud Dataset & ETL
+*   **Source**: Automated data ingestion from **Azure Blob Storage (V2)**.
+*   **Orchestration**: A Python-based ETL pipeline fetches historical ledger data from a secure `ledger` container.
+*   **Secure Auth**: Utilizes time-limited **SAS Tokens (Shared Access Signatures)** for least-privilege cloud data access, ensuring no PII is exposed to the public internet.
+*   **Normalization**: Transaction data is automatically normalized, risk-scored, and ingested into the Postgres persistence layer.
 
----
-
-## 🕵️ 2. Topic 1: Components of the NexusBank Information System
-A secure banking app is not just code; it is a system of five interacting parts:
-
--   **Hardware**: Our deployment simulates a distributed network of high-availability **Cloud Servers** (Backend) where encrypted data resides, accessed via customer **Smartphones** (Frontend) and simulated **Web Gateways**.
--   **Software**: 
-    - **Frontend**: A hardened React SPA using secure hook patterns.
-    - **Crypto-Engine**: Implementation of Web Crypto API for low-level cryptographic operations.
-    - **Database abstraction**: Encrypted `localStorage` layer acting as a "Secure Data Vault."
--   **Data**: Classification of user PII, account balances, and historical ledgers.
--   **People**: Policies defined for **Customers** (MFA usage), **System Admins** (Principle of Least Privilege), and **Security Analysts** (monitoring IDS/IPS).
--   **Procedures**: Formal workflows for **KYC Verification**, **Manual Security Overrides**, and **Fraud Auditing**.
+### 🧠 Topic 3: Managed Cloud ML (AI)
+*   **Engine**: Integrated with **Azure Cognitive Services (Anomaly Detector v3)**.
+*   **Inference**: Performs live heuristic analysis on ledger records using the Microsoft West-US Datacenter.
+*   **Result Analysis**: The system automatically flags "Statistical Deviations" (Anomalies) such as high-velocity transfers or blacklisted merchant categories with a **96/100 risk score**.
+*   **UI Integration**: Institutional "AI Insights" dashboard provides real-time visibility into machine learning risk assessments.
 
 ---
 
-## 🛡️ 3. Topic 2: Secure Software Development Life Cycle (SSDLC)
-NexusBank was built using the **SSDLC** framework, weaving security into the DNA of the application rather than "bolting it on" at the end.
+## 🛡️ Security Posture
 
-| Phase | Security Action | Resulting Feature in NexusBank |
-|:--- |:--- |:--- |
-| **Planning** | Defined hard requirements for PCI DSS & GDPR compliance. | Mandatory Encrpytion-at-Rest. |
-| **Design** | Created a **STRIDE** Threat Model to map hacker vectors. | Roles-based access and authentication gates. |
-| **Implementation**| Used secure coding guidelines to prevent SQLi & Insecure Storage. | **AES-256-GCM** Implementation. |
-| **Testing** | Simulated Penetration Tests for brute-force attacks. | **IPS Automated IP Blocking.** |
-| **Maintenance** | Designed a "Patch-Ready" modular architecture. | Swappable crypto-libraries for future-proofing. |
+-   **MFA (Multi-Factor Authentication)**: Secured with a 4-digit Safe-Token system with visual cryptographic banners.
+-   **AES-256-GCM Encryption**: All sensitive `localStorage` data is encrypted using the Web Crypto API.
+-   **RBAC (Role-Based Access Control)**: Enforced via Supabase Auth and context-aware routing.
+-   **Honey-Token Tripwires**: Automated detection of unauthorized data access attempts via cryptographic "traps."
+-   **Institutional Auditing**: A decentralized SOC Audit Log tracks all encryption, auth, and data events with log integrity verification.
 
 ---
 
-## ⚔️ 4. Topic 3: Securing Components & The "Balancing Act"
-### **The Security vs. Usability Paradox**
-In banking, too much security (e.g., 50-character passwords) kills usability, while too little kills the bank. NexusBank balances this as follows:
+## 🛠️ DevOps & CI/CD Pipeline
 
-1.  **Transport Layer Security (TLS 1.3 / HSTS)**: Implemented **Mandatory HTTPS** via `Strict-Transport-Security` headers in `netlify.toml`, preventing **Man-in-the-Middle (MitM)** and "Downgrade" attacks.
-2.  **Multi-Factor Authentication (MFA)**:
-    - *Something you know*: Password (multi-round PBKDF2 hash, 100,000 iterations).
-    - *Something you have*: **6-Digit TOTP (Authenticator App)** flow required for every session initialization.
-3.  **Principle of Least Privilege**: Staff and admin accounts use **Hierarchical RBAC (Customer < Teller < Manager < Admin)**. Data mask reveal triggers authorization gates.
-
----
-
-## 📜 5. The Evolution of Trust: A History of Information Security
-NexusBank's design honors the historical evolution of how we trust data:
-- **Physical Era (Pre-1960s)**: We simulate the "Vault" via cryptographic isolation.
-- **Mainframe Era (1960s-1980s)**: Implementation of centralized access control logic.
-- **Internet Era (1990s-2000s)**: Adoption of SSL certificates and firewalls for web banking.
-- **Modern Era (2010s-Present)**: Mobile-first security, **AI-driven Fraud Detection**, and **API Micro-segmentation**.
+The application follows an **Immutable Infrastructure** pattern for maximum reliability:
+*   **Dockerization**: Multi-stage Docker builds ensure identical environments from development to production.
+    *   **Stage 1**: React build with build-time secret injection.
+    *   **Stage 2**: Production-hardened Nginx server.
+*   **GitHub Actions**: Automated pipeline triggers on every push to `main`:
+    1.  **Security Scan**: Dependency check.
+    2.  **Containerize**: Build Docker image.
+    3.  **Deploy**: Pushes the image to **Azure Container Registry (ACR)** and updates the **Azure Container App**.
 
 ---
 
-## ⚖️ 6. Legal, Ethical, and Professional Governance
-NexusBank adheres to a formal Ethical & Professional Governance framework:
-- **Legal Compliance**:
-    - **PCI-DSS**: Ensuring cardholder data is never plain-text.
-    - **GDPR**: Respecting user "Right to be Forgotten" via secure data deletion hooks.
-- **Ethical Integrity**: We prioritize user privacy even in areas not legally required (e.g., encrypting non-transactional metadata).
-- **Professionalism**: System admins are restricted by logs that record every "audit" action, preventing professional abuse of access.
+## 📈 Monitoring & Observability
+Managed via the **Azure Portal** (`Nexus_Banking` resource group):
+*   **Metrics**: Real-time traffic, CPU, and CPU monitoring for the container.
+*   **AI Health**: Request tracking for Cognitive Services.
+*   **Audit Trail**: Local forensic logs are synchronized with cloud security dashboards.
 
 ---
 
-## 🔐 7. Topic 2 & 7: Cipher Models & Symmetric Authentication
-
-### **The Symmetric Cipher Model (AES)**
-NexusBank uses a **Symmetric Cipher** protocol.
-- **Mechanism**: The same key (derived from a PBKDF2 hash) is used for both Encryption and Decryption.
-- **Standard**: **AES-256-GCM** (Advanced Encryption Standard with 256-bit strength, Galois/Counter Mode).
-- **Gold Standard Key Derivation**: Uses PBKDF2 with a salt and 100,000 iterations, providing equivalent security to Argon2 within a browser environment.
-
-### **Message Authentication Codes (MAC)**
-To prevent **Man-in-the-Middle alterations**, we use **AEAD (Authenticated Encryption with Associated Data)** via **GCM (Galois/Counter Mode)**.
-- **The Process**: If a hacker tries to "intercept" a ₹100 transfer and change it to ₹10,000, the **Authentication Tag** mismatch will cause the system to instantly **Reject and Alert**.
-
-```javascript
-/* IN-CODE SECURITY IMPLEMENTATION */
-// File: src/utils/secureStorage.js
-// Algorithm: AES-256-GCM (Authenticated Encryption)
-async function encrypt(text) {
-  const key = await deriveKey(); // PBKDF2-Derived
-  const iv = window.crypto.getRandomValues(new Uint8Array(12)); // IV
-  const ciphertext = await window.crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(text)
-  );
-  // ... packed for Integrity-Verified retrieval
-}
-```
+## 💻 Tech Stack
+-   **Frontend**: React (Vite) + TailwindCSS + Lucide Icons
+-   **Backend/Auth**: Supabase (PostgreSQL)
+-   **Cloud**: Microsoft Azure (Storage, AI, Container Apps)
+-   **Security**: AES-256-GCM, PBKDF2, Web Crypto API
+-   **Container**: Docker + Nginx
 
 ---
-
-## 🚀 8. Topic 4: Innovation (Zero-Trust & Behavioral Model)
-Traditional banks focus on **Login**; we focus on **Behavior**.
-
-1.  **Behavioral Biometrics**: We track interaction rhythms. If the "swiping speed" or "typing rhythm" changes, it signals a potentially stolen device and triggers an identity challenge.
-2.  **Honey-Tokens (Deception)**: Sprinkling "Fake Data" (tripwires) like `MASTER_VAULT_KEY` in the system. Any access attempt triggers a silent account freeze.
-3.  **Just-In-Time (JIT) Microservices**: Transaction permissions are **Ephemeral**. A payment token only lasts 60 seconds before it "evaporates" (self-destructs).
-4.  **AI-Driven Risk Scoring (The Brain)**: Heuristic model assigns a **Risk Score (0–99)** based on values and destinations. High scores (>80) trigger mandatory Video Selfie Verification.
-5.  **Virtual Disposable Cards**: Creating single-use "Burner Cards" for web security, preventing merchant-breach persistence.
-
----
-
-## 📜 9. Glossary of Information Security Terms (NexusBank)
-
-| Term | Definition in Banking Context |
-|:--- |:--- |
-| **Plaintext** | The original, readable data (e.g., "Balance: ₹1,200"). |
-| **Ciphertext** | The unreadable, encrypted data stored in `localStorage`. |
-| **Cipher** | The algorithm (AES-256-GCM) that transforms plaintext to ciphertext. |
-| **Symmetric Key** | A single secret key used for both encryption and decryption. |
-| **Honey-Token** | A decoy data field (e.g., "ADMIN_PWD") to trap hackers silently. |
-| **MFA** | Multi-Factor Authentication: Password + Biometric Identity. |
-| **RBAC** | Role-Based Access Control: Defining "Verify" roles for CIBIL data. |
-| **IDS / IPS** | Intrusion Detection (Detection) / Prevention (Blocking) Systems. |
-
----
-
-## 📊 10. Risk Assessment Matrix (ISO 27001 Simulation)
-
-| Risk Event | Likelihood | Impact | Mitigation Status |
-|:--- |:--- |:--- |:--- |
-| **Local Storage theft** | High | Low | `MITIGATED`: Data is encrypted with AES-256. |
-| **Brute-Force Login** | Medium | High | `MITIGATED`: IPS Auto-Block after 3 attempts. |
-| **Data Alteration** | Low | Critical | `MITIGATED`: GCM-MAC Integrity Tag verification. |
-| **Lateral Movement** | Low | High | `MITIGATED`: Micro-segmentation & RBAC roles. |
-| **Unauthorized High-Value Pay** | Medium | Critical | `MITIGATED`: AI Risk Scoring & Verification Wall. |
-
----
-
-## 🔍 11. Internal SOC Audit Log (Audit Trail)
-- `20:45:10` — **[INFO]** HSTS 31536000 enforced for all routes.
-- `20:55:01` — **[INFO]** Password hashing upgraded to Institutional Grade (PBKDF2 100k rounds).
-- `21:00:22` — **[WARN]** MFA Verification required for session `NEXUS-7A22`.
-- `21:01:40` — **[AUDIT]** Data mask reveal authorized for `CUSTOMER: [Current User]`.
-- `21:02:15` — **[AUDIT]** SECURE_STORAGE: Write operation encrypted with AES-256-GCM (Tag verified).
-
----
-
-## 🛠️ 12. Future Security Roadmap (Scalability)
-1.  **Post-Quantum Cryptography**: Transitioning to lattice-based key derivation.
-2.  **Hardware Enclave Integration**: Binding decryption keys to physical TPM/Secure Enclave hardware.
-3.  **Real-time Fraud Modeling**: Moving from heuristic risk scoring to advanced ML inference.
-
----
-
-## 🏗️ 13. Final Presentation & Verification Guide (Demo Guide)
-
-To demonstrate the "NexusBank Fortress" to evaluators, follow these exact test cases:
-
-1.  **The RBAC Lock**: Navigate to the **CIBIL Score** page. Notice the dashboard is **Locked** because the user does not have the "Verified" role, demonstrating **Access Control**.
-2.  **The Innovation Gap**: Open **Virtual Cards** and click "Generate Burner Card." This shows the implementation of **Disposable Security (Topic 4.5)**.
-3.  **The AI Brain**: Go to **Payments** and attempt to send **₹60,000**. The system will trigger a **Verification Wall** because the AI Risk Score has exceeded the safety threshold (>80/100).
-4.  **The Secret Tripwire**: (For Engineers) Accessing the `secureStorage` metadata manually while the app is open will trigger a console security alert, demonstrating **Honey-Tokens**.
-
-
----
-
-## 🏛️ 15. The Bank's Fortress: Technical Justification
-This section outlines the **Why** behind our architectural choices, ensuring the "building" is secure even if one "lock" is compromised.
-
-### **1. SSL/TLS (The Secure Corridor)**
-*   **The Stuff**: Encryption between the Customer's Phone and the Bank's Web Server.
-*   **Mechanism**: Uses digital Certificates to prove identity and build a "private pipe."
-*   **Justification**: TLS/HSTS (TLS 1.3) prevents **Man-in-the-Middle (MitM)** snooping on account credentials during delivery, especially over public Wi-Fi.
-
-### **2. IPSec (The Private Underground Tunnel)**
-*   **The Stuff**: A persistent VPN bridge between fixed bank locations and trusted partners.
-*   **Mechanism**: Encrypts traffic at the IP layer (Level 3) between the Bank and bureaus like Visa.
-*   **Justification**: Creates a hardening tunnel that makes tapping into physical fiber between partners impossible—hackers see absolutely nothing.
-
-### **3. Secure Email (S/MIME)**
-*   **The Stuff**: Digital signatures and content encryption for outgoing bank communications.
-*   **Mechanism**: Every legal alert or OTP email is "Signed" with an unforgeable digital seal.
-*   **Justification**: Combats **Phishing** by proving the source and integrity of every communication from NexusBank HQ.
-
-### **4. DMZ — Demilitarized Zone (The entry Lobby)**
-*   **The Stuff**: An isolated sub-network sitting between the Internet and our core vault.
-*   **Mechanism**: The Web Server lives in the DMZ. It can talk to both sides, but the Internet cannot talk directly to the Database.
-*   **Justification**: If the Web Server is hijacked, the attacker is still stuck in the "Lobby." A second firewall blocks them from reaching the actual vault (Database).
-
-### **5. Microsegmentation (The Locked Rooms)**
-*   **The Stuff**: Dividing internal servers into many small, siloed zones.
-*   **Mechanism**: 'Marketing' and 'Money Transfer' servers are electrically separated.
-*   **Justification**: We **quarantine** every part of the bank. A malware infection in one minor server cannot "jump" to the wire transfer engine.
-
-### **6. IDS/IPS (The Motion Sensors)**
-*   **The Stuff**: Intrusion Detection and Prevention Systems.
-*   **Mechanism**: Automated pattern recognition. If a bot tries 1,000 passwords, the gates are slammed shut automatically.
-*   **Justification**: Automated "Guards" react at machine speed to block botnets before a human operator even sees the log.
-
----
-
-## 📜 16. Final Auditor's Conclusion
-The NexusBank project satisfies all **6 Course Modules** of the DIS subject. Every security parameter—from the **Symmetric Cipher Model** to **Behavioral Deception**—has been verified via a professional audit.
-
-**Audit Status**: `30/30 (EXCELLENT)`
-**Lead Security Auditor**: Antigravity AI  
-**Project Repo**: [NexusBank - Secured Finance]
-**Verification Hash**: `sha256-bd9a...c03e` (Deep Integrity Verified)
+*Nexus SOC · Institutional Grade Monitoring · Log Integrity Verified*
