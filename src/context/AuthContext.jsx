@@ -21,6 +21,17 @@ export function AuthProvider({ children }) {
 
   const MAX_ATTEMPTS = 5;
 
+  /* ── Brute Force State Recovery ── */
+  useEffect(() => {
+    const recovery = async () => {
+      const attempts = await secureStorage.getItem("_nexus_auth_attempts") || 0;
+      const blocked = await secureStorage.getItem("_nexus_auth_blocked") || false;
+      setFailedAttempts(attempts);
+      setIsBlocked(blocked);
+    };
+    recovery();
+  }, []);
+
   /**
    * Institutional RSA Implementation: Ensures every user has a persistent 
    * cryptographic identity for signing operations.
@@ -134,14 +145,20 @@ export function AuthProvider({ children }) {
     if (error) {
       const newAttempts = failedAttempts + 1;
       setFailedAttempts(newAttempts);
+      await secureStorage.setItem("_nexus_auth_attempts", newAttempts);
+
       if (newAttempts >= MAX_ATTEMPTS) {
         setIsBlocked(true);
+        await secureStorage.setItem("_nexus_auth_blocked", true);
+        writeAuditLog(null, "BRUTE_FORCE_LOCKOUT", { email, attempts: newAttempts });
         throw new Error("ACCOUNT BLOCKED: Too many failed attempts. Contact support.");
       }
       throw new Error(`Invalid credentials. ${MAX_ATTEMPTS - newAttempts} attempts left.`);
     }
 
     setFailedAttempts(0);
+    await secureStorage.setItem("_nexus_auth_attempts", 0);
+    await secureStorage.setItem("_nexus_auth_blocked", false);
 
     // 2. Load the user's profile
     const authUser = data.user;
